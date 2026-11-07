@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#FCD9E8">
+<title>PRUEBA · Pink Club · Yiyi Pash</title><meta name="robots" content="noindex"><script>document.addEventListener('DOMContentLoaded',function(){var d=document.createElement('div');d.textContent='PRUEBA · nada de lo que hagas aquí es real';d.style.cssText='position:sticky;top:0;z-index:99999;background:#b91c1c;color:#fff;text-align:center;font:700 13px/1.4 system-ui,sans-serif;padding:6px 8px';document.body.insertBefore(d,document.body.firstChild);});</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Fredoka:wght@500;600&display=swap">
+<style>
+/* App de clientas del Pink Club (02/11/2026). Identidad del manual de marca + accesibilidad (WCAG AA).
+   Colores de marca (formas y adornos): Chicle #F088B6 · Frambuesa #E55090 · Pastel #F6BAD6 · Blanco.
+   Tonos de lectura derivados de la Frambuesa: --fr-texto #AD2F68 (títulos y enlaces, 4.8:1 sobre el fondo)
+   y --fr-fondo #C13A78 (botones y credencial, letra blanca a 5.1:1). */
+:root{
+  --chicle:#F088B6; --frambuesa:#E55090; --pastel:#F6BAD6;
+  --fr-texto:#AD2F68; --fr-fondo:#C13A78;
+  --fondo:#FCD9E8; --tinta:#4a2236; --tinta2:#9b3d68; --linea:#f9d0e2;
+  --ok:#24774a; --gris:#6b5560; --bad:#b3261e;
+  --t:'Montserrat',system-ui,sans-serif; --r:'Fredoka','Montserrat',system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box;margin:0}
+[hidden]{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+:focus-visible{outline:3px solid var(--fr-texto);outline-offset:3px;border-radius:12px}
+[tabindex="-1"]:focus{outline:none}
+body{background:var(--fondo);color:var(--tinta);font-family:var(--t);font-size:15px;line-height:1.5;
+  padding:0 max(16px,env(safe-area-inset-left)) calc(96px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-right));min-height:100vh}
+.app{max-width:440px;margin:0 auto}
+
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 0 6px}
+.logo{height:38px;width:auto;display:block}
+.hola{font-family:var(--r);font-weight:500;font-size:14px;letter-spacing:.04em;color:var(--fr-texto);background:#fff;border-radius:999px;padding:6px 14px;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.titulo{font-family:var(--t);font-weight:500;font-size:22px;letter-spacing:.14em;text-transform:uppercase;color:var(--fr-texto);margin:18px 2px 14px}
+.sub{font-family:var(--t);font-weight:700;font-size:14px;letter-spacing:.02em;color:var(--fr-texto);margin:24px 4px 8px}
+.pill{display:inline-block;background:#fff;color:var(--fr-texto);font-family:var(--t);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:4px 14px}
+.pill.fund{background:transparent;color:#fff;border:1.5px solid #fff;margin-left:4px}
+
+/* Credencial (como la tarjeta "Visión" del manual) */
+.cred{background:var(--fr-fondo);color:#fff;border-radius:64px 24px 24px 24px;padding:22px 22px 20px;margin-bottom:14px;position:relative;overflow:hidden}
+.cred::after{content:"";position:absolute;right:-60px;top:-60px;width:180px;height:180px;border-radius:50%;background:var(--frambuesa)}
+.cred>*{position:relative;z-index:1}
+.cred .num{font-family:var(--r);font-weight:600;font-size:64px;line-height:1;letter-spacing:.02em;margin:18px 0 0}
+.cred .num small{font-family:var(--t);font-weight:600;font-size:14px;letter-spacing:.02em;margin-left:8px}
+.cred .eq{font-size:13.5px;margin-top:4px}
+.cred .pie{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-top:22px;padding-top:14px;border-top:1px solid rgba(255,255,255,.4)}
+.cred dt{font-size:12px;font-weight:600;letter-spacing:.02em}
+.cred dd{margin:0}
+.cred .v{font-family:var(--r);font-weight:500;font-size:16px;letter-spacing:.04em}
+.cred .id{font-family:var(--r);font-weight:600;font-size:20px;letter-spacing:.12em}
+.cred.grande .id{font-size:34px;margin-top:2px}
+
+.card{background:#fff;border-radius:28px 28px 28px 8px;padding:6px 20px;margin-bottom:12px}
+.lista{list-style:none;padding:0;margin:0}
+.card.lista{padding:6px 20px;margin-bottom:12px}
+.fila{padding:13px 0;border-bottom:1px solid var(--linea)}
+.fila:last-child{border:none}
+.fila.dos{display:flex;justify-content:space-between;align-items:center;gap:12px}
+dl.card{margin:0 0 12px}
+dl.card dd{margin:0}
+.lab{font-size:12.5px;font-weight:600;letter-spacing:.01em;color:var(--tinta2)}
+.val{font-family:var(--r);font-weight:500;font-size:17px;letter-spacing:.03em;color:var(--tinta);margin-top:1px}
+.det{font-size:13px;color:var(--tinta2);margin-top:2px}
+.der{text-align:right;white-space:nowrap}
+.monto{font-family:var(--r);font-weight:600;font-size:16px;color:var(--tinta)}
+.pts{font-size:12.5px;font-weight:700;color:var(--fr-texto)}
+.pts.menos{color:var(--gris)}
+.estado{font-size:13px;font-weight:700;margin-top:3px}
+.estado.Sana{color:var(--ok)} .estado.Curando{color:var(--fr-texto)} .estado.Retirada{color:var(--gris)}
+.enlace{background:none;border:none;padding:0;font:inherit;color:var(--fr-texto);font-weight:600;text-decoration:underline;text-decoration-color:var(--chicle);text-underline-offset:4px;cursor:pointer;text-align:left}
+.vacio{padding:14px 0;color:var(--tinta2);font-size:14px}
+
+.prox{display:flex;align-items:center;gap:16px;background:#fff;border-radius:999px;padding:8px 20px 8px 8px;margin-bottom:12px}
+.prox .dia{flex:0 0 64px;height:64px;border-radius:50%;background:var(--fr-fondo);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.prox .dia b{font-family:var(--r);font-weight:600;font-size:24px}
+.prox .dia span{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+.tranqui{background:#fff;border-radius:28px;padding:14px 22px;margin-bottom:12px}
+
+.ben{background:#fff;border-radius:999px;padding:14px 22px;margin-bottom:10px}
+.ben:nth-child(even){margin-left:22px}
+.ben:nth-child(odd){margin-right:22px}
+.ben .val{color:var(--fr-texto);font-weight:600}
+
+.btn{display:block;width:100%;min-height:48px;text-align:center;padding:15px;border:none;border-radius:999px;background:var(--fr-fondo);color:#fff;
+  font-family:var(--t);font-size:13.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;text-decoration:none}
+.btn:disabled{opacity:.6;cursor:wait}
+.btn.sec{background:#fff;color:var(--fr-texto);border:2px solid var(--chicle)}
+.link{display:inline-block;padding:10px 4px;color:var(--fr-texto);font-weight:600;font-size:13.5px;text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--chicle)}
+.nota{font-size:13px;color:var(--tinta2);text-align:center;margin-top:10px}
+.legal{display:flex;justify-content:center;gap:18px;margin-top:14px}
+.legal a{display:inline-block;padding:10px 2px;font-size:12.5px;font-weight:500;color:var(--tinta2);text-decoration:underline;text-decoration-color:var(--chicle);text-underline-offset:4px}
+.salir{display:block;min-height:44px;margin:22px auto 0;background:none;border:none;font-family:var(--t);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--tinta2);cursor:pointer;padding:10px 14px}
+.err{color:var(--bad);font-size:13.5px;font-weight:600;margin-top:12px}
+
+.tl{list-style:none;padding:12px 0 6px}
+.tl li{position:relative;padding:0 0 16px 22px}
+.tl li::before{content:"";position:absolute;left:3px;top:7px;width:9px;height:9px;border-radius:50%;background:var(--frambuesa)}
+.tl li::after{content:"";position:absolute;left:7px;top:19px;bottom:0;width:1.5px;background:var(--pastel)}
+.tl li:last-child{padding-bottom:6px}
+.tl li:last-child::after{display:none}
+.tl .val{font-size:15px}
+
+.entrada{padding-top:40px;text-align:center}
+.entrada .logo{height:64px;margin:0 auto}
+.entrada .titulo{margin:18px 0 6px}
+.lema{font-family:var(--r);font-weight:500;letter-spacing:.04em;color:var(--tinta2);font-size:15px}
+.form{background:#fff;border-radius:40px 40px 40px 12px;padding:22px 20px;margin-top:22px;text-align:left}
+label{display:block;font-size:12.5px;font-weight:600;letter-spacing:.01em;color:var(--tinta2);margin-bottom:6px}
+input{display:block;width:100%;margin:0 0 14px;border:1.5px solid var(--chicle);border-radius:999px;padding:12px 18px;font-family:var(--r);font-weight:500;letter-spacing:.04em;font-size:16px;color:var(--tinta);background:#fff;outline:none;min-height:48px}
+input:focus-visible{border-color:var(--fr-texto);outline:3px solid var(--pastel);outline-offset:1px}
+.recordar{display:flex;gap:10px;align-items:center;min-height:44px;font-size:13.5px;font-weight:500;margin:0 0 10px}
+.recordar input{width:20px;height:20px;min-height:0;margin:0;padding:0;accent-color:var(--fr-fondo)}
+.cargando{padding-top:120px;text-align:center;color:var(--tinta2);font-family:var(--r);letter-spacing:.04em}
+
+/* Foto de perfil (opcional) */
+.avatar{border-radius:50%;object-fit:cover;background:var(--pastel);display:block}
+.hdr-der{display:flex;align-items:center;gap:8px;max-width:66%;min-width:0}
+.hdr-der .hola{max-width:none;min-width:0}
+.hdr-der .avatar{width:36px;height:36px;flex:0 0 36px;border:2px solid #fff}
+.cred .foto-cred{position:absolute;right:16px;top:14px;width:76px;height:76px;border-radius:50%;border:3px solid #fff;z-index:2;
+  display:flex;align-items:center;justify-content:center;background:var(--frambuesa);font-family:var(--r);font-weight:600;font-size:32px;color:#fff;overflow:hidden}
+.cred .foto-cred img{width:100%;height:100%;object-fit:cover}
+.foto-acc{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.foto-acc .btn{width:auto;padding:12px 22px;min-height:44px}
+.permiso{display:flex;gap:10px;align-items:flex-start;font-size:13px;font-weight:500;color:var(--tinta);margin:12px 0 4px;line-height:1.45}
+.permiso input{width:20px;height:20px;min-height:0;margin:2px 0 0;padding:0;flex:0 0 20px;accent-color:var(--fr-fondo)}
+
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:0 max(12px,env(safe-area-inset-left)) calc(10px + env(safe-area-inset-bottom))}
+nav.tabs [role="tablist"]{max-width:440px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:#fff;border-radius:999px;padding:5px;box-shadow:0 6px 24px rgba(193,58,120,.18)}
+nav.tabs [role="tab"]{min-height:44px;background:none;border:none;font-family:var(--t);color:var(--tinta2);font-size:11.5px;font-weight:600;letter-spacing:.01em;padding:12px 2px;border-radius:999px;cursor:pointer}
+nav.tabs [role="tab"][aria-selected="true"]{background:var(--fr-fondo);color:#fff}
+</style>
+</head>
+<body>
+<div class="app">
+
+<p id="v-cargando" class="cargando" role="status">Abriendo tu Pink Club…</p>
+
+<!-- ═════ ENTRADA ═════ -->
+<main id="v-entrada" class="entrada" hidden>
+  <img class="logo" alt="Yiyi Pash" src="data:image/png;base64,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">
+  <h1 class="titulo">Pink Club</h1>
+  <p class="lema">Tus puntos y tus perforaciones, en un solo lugar.</p>
+  <form class="form" id="f-entrar" novalidate>
+    <label for="wa">Tu WhatsApp</label>
+    <input id="wa" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="10 dígitos">
+    <label for="fn">Tu fecha de nacimiento</label>
+    <input id="fn" type="date" autocomplete="bday">
+    <label class="recordar"><input id="recordar" type="checkbox" checked> Recordarme en este celular</label>
+    <button class="btn" id="b-entrar" type="submit">Entrar</button>
+    <p class="err" id="e-entrar" role="alert"></p>
+  </form>
+  <p class="nota">¿Primera vez? <a class="link" href="registro.html">Regístrate gratis</a></p>
+  <div class="legal"><a href="aviso.html">Aviso de privacidad</a><a href="terminos.html">Términos</a></div>
+</main>
+
+<!-- ═════ CONFIRMAR (link abierto en un celular nuevo) ═════ -->
+<main id="v-confirmar" class="entrada" hidden>
+  <h1 class="titulo" tabindex="-1" id="t-confirmar">Confirma que eres tú</h1>
+  <p class="lema">Es la primera vez que abres tu link en este celular. Para cuidar tus datos, escribe tu fecha de nacimiento.</p>
+  <form class="form" id="f-confirmar" novalidate>
+    <label for="fn3">Tu fecha de nacimiento</label>
+    <input id="fn3" type="date" autocomplete="bday">
+    <button class="btn" id="b-confirmar" type="submit">Entrar</button>
+    <p class="err" id="e-confirmar" role="alert"></p>
+  </form>
+  <p class="nota">Solo te la pedimos una vez en cada celular.</p>
+  <p class="nota"><button class="enlace" type="button" onclick="salir()">Entrar de otra forma</button></p>
+</main>
+
+<!-- ═════ ACEPTAR AVISO (cuenta abierta por invitación) ═════ -->
+<main id="v-aviso" class="entrada" hidden>
+  <h1 class="titulo" tabindex="-1" id="t-aviso">Antes de entrar</h1>
+  <p class="lema" id="aviso-lema"></p>
+  <form class="form" id="f-aviso" novalidate>
+    <label class="permiso"><input id="ok-aviso" type="checkbox"> <span>Acepto el <a class="link" href="aviso.html" target="_blank">aviso de privacidad</a> y los <a class="link" href="terminos.html" target="_blank">términos del Pink Club</a>.</span></label>
+    <button class="btn" id="b-aviso" type="submit">Entrar</button>
+    <p class="err" id="e-aviso" role="alert"></p>
+  </form>
+  <p class="nota">Solo te lo pedimos una vez.</p>
+</main>
+
+<!-- ═════ APP ═════ -->
+<div id="v-app" hidden>
+<header>
+  <img class="logo" alt="Yiyi Pash" src="data:image/png;base64,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">
+  <div class="hdr-der"><img class="avatar" id="foto-hdr" alt="" hidden><span class="hola" id="hola"></span></div>
+</header>
+
+<main id="contenido">
+
+<section role="tabpanel" id="panel-puntos" aria-labelledby="tab-puntos">
+  <h1 class="sr" tabindex="-1">Mis puntos</h1>
+  <article class="cred" style="margin-top:12px" aria-label="Tu tarjeta Pink Club">
+    <span class="pill">Pink Club</span> <span class="pill fund" hidden>Fundadora</span>
+    <p class="num"><span id="saldo">0</span><small>puntos</small></p>
+    <p class="eq">Cada punto vale $1 en joyería</p>
+    <dl class="pie">
+      <div><dt>Miembro</dt><dd class="v" id="miembro"></dd></div>
+      <div style="text-align:right"><dt>ID</dt><dd class="id" id="id1"></dd></div>
+    </dl>
+  </article>
+  <dl class="card">
+    <div class="fila"><dt class="lab">Regalo de cumpleaños</dt><dd class="val" id="cumple1"></dd></div>
+    <div class="fila"><dt class="lab">Tus puntos</dt><dd class="val">Duran 12 meses si nos visitas al menos cada 6</dd><dd class="det" id="vence"></dd></div>
+  </dl>
+  <h2 class="sub">Tus compras</h2>
+  <ul class="card lista" id="movs"></ul>
+  <p class="nota" id="nota-lanz" hidden>Tus compras empiezan a sumar puntos el 13 de noviembre.</p>
+</section>
+
+<section role="tabpanel" id="panel-expediente" aria-labelledby="tab-expediente" hidden>
+  <h1 class="titulo" tabindex="-1">Mi expediente</h1>
+  <div id="exp"></div>
+</section>
+
+<section role="tabpanel" id="panel-beneficios" aria-labelledby="tab-beneficios" hidden>
+  <h1 class="titulo" tabindex="-1">Beneficios</h1>
+  <ul class="lista">
+    <li class="ben"><div class="val">Gana con cada compra</div><div class="det" id="b-ppp">1 punto por cada $10</div></li>
+    <li class="ben"><div class="val">Úsalos en joyería</div><div class="det" id="b-min">Cada punto vale $1, desde 50 puntos</div></li>
+    <li class="ben"><div class="val">Un regalo en tu cumpleaños</div><div class="det">Una pieza sorpresa Pink en tu mes</div></li>
+    <li class="ben"><div class="val">Tus puntos te esperan</div><div class="det">Duran 12 meses; visítanos al menos cada 6</div></li>
+  </ul>
+  <div class="legal"><a href="terminos.html">Términos y condiciones</a></div>
+</section>
+
+<section role="tabpanel" id="panel-datos" aria-labelledby="tab-datos" hidden>
+  <h1 class="titulo" tabindex="-1">Mis datos</h1>
+  <article class="cred grande" aria-label="Tu credencial">
+    <div class="foto-cred" id="foto-cred" aria-hidden="true"></div>
+    <span class="pill">Pink Club</span> <span class="pill fund" hidden>Fundadora</span>
+    <dl style="margin-top:20px"><dt>ID de miembro</dt><dd class="id" id="id2"></dd></dl>
+    <p class="v" style="margin-top:6px" id="nombre2"></p>
+  </article>
+  <dl class="card">
+    <div class="fila"><dt class="lab">Foto de perfil <span style="font-weight:500">(opcional)</span></dt>
+      <dd class="det">Para que en el estudio te reconozcamos. Solo la ven tú y el equipo.</dd>
+      <dd id="foto-zona"></dd></div>
+    <div class="fila"><dt class="lab">WhatsApp</dt><dd class="val" id="d-wa"></dd></div>
+    <div class="fila"><dt class="lab">Correo</dt><dd class="val" id="d-email"></dd></div>
+    <div class="fila" id="fila-cumple"><dt class="lab">Cumpleaños</dt><dd class="val" id="cumple2"></dd>
+      <dd id="f-fecha" hidden>
+        <label for="fn2" class="sr">Tu fecha de nacimiento</label>
+        <input id="fn2" type="date" autocomplete="bday" style="margin:8px 0 10px">
+        <button class="btn" id="b-fecha" type="button">Guardar</button>
+        <p class="det" style="margin-top:8px">Solo se puede guardar una vez. Si te equivocas, escríbenos.</p>
+        <p class="err" id="e-fecha" role="alert"></p>
+      </dd></div>
+    <div class="fila"><dt class="lab">Promociones por WhatsApp</dt><dd class="val" id="d-mkt"></dd></div>
+  </dl>
+  <a class="btn" id="b-corregir" href="#" target="_blank" rel="noopener">Quiero corregir un dato</a>
+  <nav class="legal" aria-label="Documentos legales"><a href="aviso.html">Aviso de privacidad</a><a href="terminos.html">Términos</a></nav>
+  <button class="salir" type="button" id="b-salir">Salir de este celular</button>
+</section>
+
+</main>
+</div>
+</div>
+
+<nav class="tabs" id="tabs" aria-label="Secciones" hidden>
+  <div role="tablist" aria-label="Secciones del Pink Club">
+    <button role="tab" id="tab-puntos" aria-controls="panel-puntos" aria-selected="true">Puntos</button>
+    <button role="tab" id="tab-expediente" aria-controls="panel-expediente" aria-selected="false" tabindex="-1">Expediente</button>
+    <button role="tab" id="tab-beneficios" aria-controls="panel-beneficios" aria-selected="false" tabindex="-1">Beneficios</button>
+    <button role="tab" id="tab-datos" aria-controls="panel-datos" aria-selected="false" tabindex="-1">Mis datos</button>
+  </div>
+</nav>
+
+<script>
+const AS_URL='https://script.google.com/macros/s/AKfycbwOhVk8lowZwedDv-J0wOCparRSL1MZu9ybJXJ6oru5Br87eLRgtO6Ny10sv947ciuv/exec';
+const LANZAMIENTO='2026-11-13';
+const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const MES3=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Number(n||0).toLocaleString('es-MX');
+const fecha=iso=>{if(!iso)return '';const [y,m,d]=iso.split('-').map(Number);return d+' '+MES3[m-1]+' '+y;};
+const cap=s=>{s=String(s||'').trim();return s.charAt(0).toUpperCase()+s.slice(1);};
+// Lo guardado en este celular (solo de la clienta). Puede fallar en modo privado: entonces solo no se recuerda.
+const mem={get:k=>{try{return localStorage.getItem(k);}catch(_){return null;}},set:(k,v)=>{try{localStorage.setItem(k,v);}catch(_){}},del:k=>{try{localStorage.removeItem(k);}catch(_){}}};
+let D=null,acceso=null;
+
+async function api(o){
+  const r=await fetch(AS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(o),redirect:'follow'});
+  const j=await r.json();
+  if(!j.ok)throw new Error(j.error||'No se pudo conectar. Intenta de nuevo.');
+  return j.data;
+}
+function vista(v){['v-cargando','v-entrada','v-confirmar','v-aviso','v-app','tabs'].forEach(id=>$(id).hidden=!(id===v||(v==='v-app'&&id==='tabs'&&!(D&&D.sin_cuenta))));}
+
+// ── Entrar ──────────────────────────────────────────────
+async function iniciar(){
+  // Liga personal: yiyipash.com/pink/#llave=… → se guarda y se quita de la barra de direcciones
+  const m=location.hash.match(/llave=([a-f0-9]{32})/);
+  if(m){mem.set('yppc_llave',m[1]);history.replaceState(null,'',location.pathname+location.search);}
+  const llave=mem.get('yppc_llave');
+  let rec=null;try{rec=JSON.parse(mem.get('yppc_entrada')||'null');}catch(_){}
+  if(llave)acceso={llave,pase:mem.get('yppc_pase')||''};
+  else if(rec&&rec.whatsapp&&rec.fecha_nacimiento)acceso=rec;
+  if(!acceso){vista('v-entrada');return;}
+  try{await cargar();}
+  catch(e){
+    // Solo se olvida el link si el servidor dice que ya no sirve (no por falta de internet)
+    if(llave&&/ya no es válido/.test(e.message)){mem.del('yppc_llave');mem.del('yppc_pase');}
+    acceso=null;vista('v-entrada');$('e-entrar').textContent=e.message;
+  }
+}
+async function cargar(){
+  D=await api(Object.assign({action:'pink_app'},acceso));
+  // Link abierto en un celular nuevo: primero confirma su fecha de nacimiento
+  if(D.pedir_fecha){D=null;vista('v-confirmar');$('t-confirmar').focus();return;}
+  if(acceso.llave){
+    if(D.pase){mem.set('yppc_pase',D.pase);acceso.pase=D.pase;}
+    delete acceso.fecha_nacimiento;
+  }
+  delete acceso.acepto_aviso;
+  // Cuenta abierta por invitación: primero acepta el aviso y los términos
+  if(D.pedir_aviso){
+    $('aviso-lema').textContent=D.menor
+      ?'Para usar la cuenta de '+D.apodo+', su mamá, papá o tutor debe aceptar el aviso de privacidad y los términos.'
+      :'Hola, '+D.apodo+'. Para usar tu Pink Club, lee y acepta el aviso de privacidad y los términos.';
+    D=null;vista('v-aviso');$('t-aviso').focus();return;
+  }
+  pintar();vista('v-app');ir('puntos',false);
+}
+$('f-entrar').onsubmit=async e=>{
+  e.preventDefault();
+  const wa=$('wa').value.replace(/\D/g,'').slice(-10),fn=$('fn').value;
+  $('e-entrar').textContent='';
+  if(wa.length!==10){$('e-entrar').textContent='Escribe tu WhatsApp de 10 dígitos.';$('wa').focus();return;}
+  if(!fn){$('e-entrar').textContent='Escribe tu fecha de nacimiento.';$('fn').focus();return;}
+  const b=$('b-entrar');b.disabled=true;b.textContent='Entrando…';
+  acceso={whatsapp:wa,fecha_nacimiento:fn};
+  try{
+    await cargar();
+    if($('recordar').checked)mem.set('yppc_entrada',JSON.stringify(acceso));
+  }catch(x){acceso=null;$('e-entrar').textContent=x.message;}
+  finally{b.disabled=false;b.textContent='Entrar';}
+};
+$('f-confirmar').onsubmit=async e=>{
+  e.preventDefault();
+  const fn=$('fn3').value,b=$('b-confirmar');$('e-confirmar').textContent='';
+  if(!fn){$('e-confirmar').textContent='Escribe tu fecha de nacimiento.';$('fn3').focus();return;}
+  b.disabled=true;b.textContent='Entrando…';
+  try{acceso.fecha_nacimiento=fn;await cargar();}
+  catch(x){delete acceso.fecha_nacimiento;$('e-confirmar').textContent=x.message;}
+  finally{b.disabled=false;b.textContent='Entrar';}
+};
+$('f-aviso').onsubmit=async e=>{
+  e.preventDefault();
+  const b=$('b-aviso');$('e-aviso').textContent='';
+  if(!$('ok-aviso').checked){$('e-aviso').textContent='Para entrar debes marcar la casilla.';return;}
+  b.disabled=true;b.textContent='Entrando…';
+  try{acceso.acepto_aviso=true;await cargar();}
+  catch(x){delete acceso.acepto_aviso;$('e-aviso').textContent=x.message;}
+  finally{b.disabled=false;b.textContent='Entrar';}
+};
+function salir(){mem.del('yppc_llave');mem.del('yppc_pase');mem.del('yppc_entrada');location.reload();}
+$('b-salir').onclick=salir;
+
+// ── Pintar ──────────────────────────────────────────────
+// Cómo se presenta la clienta en los WhatsApp que manda desde la app: apodo (ID)
+function quien(){const p=D.persona;return (p.apodo||p.nombre.split(/\s+/)[0])+' ('+p.id+')';}
+function waLink(texto){return 'https://wa.me/'+D.estudio.codigo_pais+D.estudio.whatsapp+'?text='+encodeURIComponent(texto);}
+function pintar(){
+  if(D.sin_cuenta){
+    $('hola').textContent='Hola, '+D.apodo;
+    $('contenido').innerHTML='<p class="tranqui" style="margin-top:20px">'+esc(D.mensaje)+'</p><button class="salir" type="button" onclick="salir()">Salir de este celular</button>';
+    return;
+  }
+  const p=D.persona,c=D.cuenta;
+  const partes=p.nombre.split(/\s+/);
+  $('hola').textContent='Hola, '+p.apodo;
+  $('saldo').textContent=fmt(c.saldo);
+  document.querySelectorAll('.pill.fund').forEach(x=>x.hidden=!c.fundadora);
+  // Nombre + primer apellido: "Luis Enrique López Pacheco" → "Luis López"; "Laura Romero Retama" → "Laura Romero"
+  $('miembro').textContent=partes.length>=4?partes[0]+' '+partes[partes.length-2]:partes.slice(0,2).join(' ');
+  $('id1').textContent=$('id2').textContent=p.id;
+  $('nombre2').textContent=p.nombre;
+  const cumpleTxt=p.cumple?p.cumple.dia+' de '+MESES[p.cumple.mes-1]:'';
+  $('cumple1').innerHTML=p.cumple?'En '+MESES[p.cumple.mes-1]:'<button class="enlace" type="button" onclick="pedirFecha()">Agrega tu fecha de nacimiento</button>';
+  $('cumple2').innerHTML=p.cumple?esc(cumpleTxt):'<button class="enlace" type="button" onclick="pedirFecha()">Agregar</button>';
+  $('vence').textContent=!c.vence?'':(c.vence_tipo==='antiguedad'?fmt(c.vence_pts)+' puntos cumplen 12 meses y vencen el '+fecha(c.vence)+'. Úsalos antes.':'Si no nos visitas antes del '+fecha(c.vence)+', vencen.');
+  $('vence').hidden=!c.vence;
+  $('d-wa').innerHTML='<span aria-hidden="true">•••• •••• </span><span class="sr">termina en </span>'+esc(p.wa4);
+  $('d-email').textContent=p.email||'Sin correo';
+  $('d-mkt').textContent=p.marketing?'Sí':'No';
+  $('b-corregir').href=waLink('Hola, soy '+quien()+' y quiero corregir un dato de mi Pink Club.');
+  $('b-ppp').textContent='1 punto por cada $'+D.estudio.pesos_por_punto;
+  $('b-min').textContent='Cada punto vale $1, desde '+D.estudio.minimo_canje+' puntos';
+  $('nota-lanz').hidden=new Date().toISOString().slice(0,10)>=LANZAMIENTO;
+  pintarMovs();pintarExp();pintarFoto();
+}
+function pintarMovs(){
+  const nombres={Acumula:'Compra',Canje:'Canje de puntos','Cumpleaños':'Regalo de cumpleaños',Ajuste:'Puntos del estudio',Vence:'Puntos vencidos',Vencimiento:'Puntos vencidos',Baja:'Baja'};
+  const L=D.movimientos||[];
+  $('movs').innerHTML=L.length?L.map(m=>{
+    const tit=m.tipo==='Acumula'&&!m.puntos&&m.monto?'Compra':(nombres[m.tipo]||m.tipo);
+    const det=fecha(m.fecha)+(m.nota?' · Nota '+m.nota:'');
+    const pts=m.puntos?'<div class="pts'+(m.puntos<0?' menos':'')+'">'+(m.puntos>0?'+':'−')+fmt(Math.abs(m.puntos))+' pts</div>':'';
+    const monto=m.tipo==='Acumula'&&m.monto?'<div class="monto">$'+fmt(m.monto)+'</div>':'';
+    return '<li class="fila dos"><div><div class="val">'+esc(tit)+'</div><div class="det">'+esc(det)+'</div></div><div class="der">'+monto+pts+'</div></li>';
+  }).join(''):'<li class="vacio">Aquí verás tus compras y tus puntos.</li>';
+}
+function estadoTxt(x){
+  if(x.estado==='Curando')return '<div class="estado Curando">Sanando'+(x.dias!=null&&x.dias>=0?' · día '+(x.dias+1):'')+'</div>';
+  if(x.estado==='Sana')return '<div class="estado Sana">Sanada</div>';
+  if(x.estado==='Retirada')return '<div class="estado Retirada">Retirada</div>';
+  return '';
+}
+function pintarExp(){
+  const E=D.expediente,p=D.persona;
+  if(!E){
+    $('exp').innerHTML='<div class="tranqui"><div class="val" style="font-size:16px">Tu expediente está protegido</div>'+
+      '<p class="det">Para verlo, abre el link personal que te mandamos por WhatsApp.</p></div>'+
+      '<a class="btn sec" target="_blank" rel="noopener" href="'+esc(waLink('Hola, soy '+quien()+'. ¿Me mandan mi link personal del Pink Club?'))+'">Pedir mi link por WhatsApp</a>';
+    return;
+  }
+  let h='';
+  if(E.proxima){const [y,mm,dd]=E.proxima.fecha.split('-').map(Number);
+    h+='<article class="prox" aria-label="Tu próxima cita"><p class="dia" aria-hidden="true"><b>'+dd+'</b><span>'+MES3[mm-1]+'</span></p>'+
+      '<div><h2 class="val" style="font-size:17px">'+esc(cap(E.proxima.texto))+'</h2><p class="det"><span class="sr">'+esc(fecha(E.proxima.fecha))+'. </span>Sin costo. Pasa al estudio.</p></div></article>';}
+  else h+='<p class="tranqui"><span class="val" style="font-size:16px">Todo en orden</span><br><span class="det">No tienes revisiones pendientes.</span></p>';
+  const item=x=>'<li class="fila"><div class="val">'+esc(cap(x.zona))+'</div><div class="det">'+esc(fecha(x.fecha))+'</div>'+estadoTxt(x)+'</li>';
+  h+='<h2 class="sub">Mis perforaciones</h2>';
+  h+=E.perforaciones.length?'<ul class="card lista">'+E.perforaciones.map(item).join('')+'</ul>':'<p class="tranqui det">Aquí verás tus perforaciones.</p>';
+  if(E.tatuajes.length)h+='<h2 class="sub">Mis tatuajes</h2><ul class="card lista">'+E.tatuajes.map(item).join('')+'</ul>';
+  if(E.manual)h+='<a class="btn" target="_blank" rel="noopener" href="'+esc(E.manual)+'">Mi manual de cuidados</a>';
+  if(E.tatuajes.length&&E.manual_tatuaje)h+='<a class="btn sec" style="margin-top:10px" target="_blank" rel="noopener" href="'+esc(E.manual_tatuaje)+'">Cuidados de mi tatuaje</a>';
+  h+='<p class="nota"><a class="link" target="_blank" rel="noopener" href="'+esc(waLink('Hola, soy '+quien()+' y tengo una duda sobre mis cuidados.'))+'">¿Dudas? Escríbenos</a></p>';
+  if(E.visitas.length)h+='<h2 class="sub">Mis visitas</h2><div class="card"><ol class="tl" reversed>'+E.visitas.map(v=>
+    '<li><div class="val">'+esc(fecha(v.fecha))+' · '+esc(v.tipo)+'</div>'+((v.lugar||v.atendio)?'<div class="det">'+esc([v.lugar,v.atendio?'con '+v.atendio:''].filter(Boolean).join(' · '))+'</div>':'')+'</li>').join('')+'</ol></div>';
+  $('exp').innerHTML=h;
+}
+
+// ── Foto de perfil (opcional, solo con link personal y 18+) ──
+function pintarFoto(){
+  const p=D.persona,f=p.foto||'';
+  $('foto-hdr').hidden=!f;if(f){$('foto-hdr').src=f;}
+  $('foto-cred').innerHTML=f?'<img alt="" src="'+esc(f)+'">':esc((p.apodo||p.nombre||'?').trim().charAt(0).toUpperCase());
+  const z=$('foto-zona');
+  if(p.tipo!=='Titular'){z.innerHTML='<p class="det">Disponible a partir de los 18 años.</p>';return;}
+  if(!acceso||!acceso.llave){z.innerHTML='<p class="det">Para agregarla, entra con tu link personal.</p>';return;}
+  z.innerHTML=
+    '<label class="permiso"><input type="checkbox" id="foto-ok"><span>Acepto que Yiyi Pash guarde esta foto para reconocerme. Puedo quitarla cuando quiera.</span></label>'+
+    '<input type="file" id="foto-arch" accept="image/*" class="sr" tabindex="-1" aria-hidden="true">'+
+    '<div class="foto-acc"><button class="btn sec" type="button" id="b-foto">'+(f?'Cambiar foto':'Agregar foto')+'</button>'+
+    (f?'<button class="enlace" type="button" id="b-foto-quitar">Quitar foto</button>':'')+'</div>'+
+    '<p class="err" id="e-foto" role="alert"></p>';
+  $('b-foto').onclick=()=>{
+    $('e-foto').textContent='';
+    if(!$('foto-ok').checked){$('e-foto').textContent='Marca la casilla de permiso para continuar.';$('foto-ok').focus();return;}
+    $('foto-arch').click();
+  };
+  $('foto-arch').onchange=async()=>{
+    const a=$('foto-arch').files[0];if(!a)return;
+    const b=$('b-foto');b.disabled=true;b.textContent='Guardando…';
+    try{const foto=await achicar(a);await guardarFoto({foto,permiso:true});}
+    catch(x){$('e-foto').textContent=x.message;b.disabled=false;b.textContent=f?'Cambiar foto':'Agregar foto';}
+  };
+  if(f)$('b-foto-quitar').onclick=async()=>{
+    if(!confirm('¿Quitar tu foto de perfil?'))return;
+    try{await guardarFoto({borrar:true});}catch(x){$('e-foto').textContent=x.message;}
+  };
+}
+async function guardarFoto(o){
+  const r=await api(Object.assign({action:'pink_app_foto',llave:acceso.llave,pase:acceso.pase||''},o));
+  D.persona.foto=r.foto||'';pintarFoto();
+  const b=$('b-foto');if(b)b.focus();
+}
+// Recorta al centro en cuadrado y la deja en 480 px JPG (pesa poco y se ve bien en el celular)
+function achicar(archivo){
+  return new Promise((ok,mal)=>{
+    if(!/^image\//.test(archivo.type||'image/')){mal(new Error('Elige una foto.'));return;}
+    const url=URL.createObjectURL(archivo),img=new Image();
+    img.onload=()=>{
+      const lado=Math.min(img.naturalWidth,img.naturalHeight),T=480,c=document.createElement('canvas');
+      c.width=c.height=T;
+      c.getContext('2d').drawImage(img,(img.naturalWidth-lado)/2,(img.naturalHeight-lado)/2,lado,lado,0,0,T,T);
+      URL.revokeObjectURL(url);ok(c.toDataURL('image/jpeg',0.85));
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);mal(new Error('No pudimos abrir esa foto. Intenta con otra.'));};
+    img.src=url;
+  });
+}
+
+// ── Fecha de nacimiento (solo con link personal) ───────
+function pedirFecha(){
+  ir('datos');
+  if(!acceso||!acceso.llave){$('cumple2').textContent='Entra con tu link personal para agregarla';return;}
+  $('f-fecha').hidden=false;$('cumple2').hidden=true;$('fn2').focus();
+}
+$('b-fecha').onclick=async()=>{
+  const fn=$('fn2').value,b=$('b-fecha');$('e-fecha').textContent='';
+  if(!fn){$('e-fecha').textContent='Escribe tu fecha de nacimiento.';return;}
+  b.disabled=true;b.textContent='Guardando…';
+  try{const r=await api({action:'pink_app_fecha',llave:acceso.llave,fecha_nacimiento:fn});if(r.pase){mem.set('yppc_pase',r.pase);acceso.pase=r.pase;}$('f-fecha').hidden=true;$('cumple2').hidden=false;await cargar();ir('datos');}
+  catch(x){$('e-fecha').textContent=x.message;}
+  finally{b.disabled=false;b.textContent='Guardar';}
+};
+
+// ── Pestañas (patrón ARIA). Al cambiar, el foco va al título de la sección. ──
+const tabs=[...document.querySelectorAll('[role="tab"]')];
+function ir(t,enfocar){
+  tabs.forEach(b=>{const on=b.id==='tab-'+t;b.setAttribute('aria-selected',on);b.tabIndex=on?0:-1;$(b.getAttribute('aria-controls')).hidden=!on;});
+  scrollTo(0,0);
+  if(enfocar!==false){const h=document.querySelector('#panel-'+t+' h1');if(h)h.focus({preventScroll:true});}
+}
+tabs.forEach((b,i)=>{
+  b.onclick=()=>ir(b.id.slice(4));
+  b.onkeydown=e=>{
+    const k={ArrowRight:i+1,ArrowLeft:i-1,Home:0,End:tabs.length-1}[e.key];
+    if(k===undefined)return;
+    e.preventDefault();const n=tabs[(k+tabs.length)%tabs.length];ir(n.id.slice(4),false);n.focus();
+  };
+});
+window.addEventListener('hashchange',()=>{if(/llave=/.test(location.hash)){acceso=null;iniciar();}});
+iniciar();
+</script>
+</body>
+</html>
