@@ -957,6 +957,7 @@ function guardar(){
 }
 function enviar(){
   const data=S.payload;
+  if(!data.id_envio)data.id_envio=Date.now().toString(36)+Math.random().toString(36).slice(2);   // el reintento lleva el mismo: no duplica
   const p=DEMO?new Promise(ok=>setTimeout(()=>{const id=data.persona.id_clienta||'NUE-0001';
       ok({id_clienta:id,id_consent:'CON-000001',nueva:!data.persona.id_clienta,pink_id:data.autorizaciones.pink==='si'?id:'',
         perforaciones:data.perforaciones.map((p,i)=>({...p,id_perfo:'PER-00000'+(i+1)})),

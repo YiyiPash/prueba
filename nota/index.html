@@ -1037,6 +1037,8 @@ function cerrarPreview(){
 async function confirmarEnvio(){
   if(!_pendingPayload||!_pendingTab)return;
   const payload=_pendingPayload,tab=_pendingTab;
+  // La misma nota lleva siempre el mismo código: si se corta el internet y reintentan, no se duplica
+  payload.id_envio=tab.id_envio||(tab.id_envio=Date.now().toString(36)+Math.random().toString(36).slice(2));
   cerrarPreview();
   localStorage.setItem('ypp_elaboro_id',tab.elaboro.id);
   localStorage.setItem('ypp_elaboro_alias',tab.elaboro.alias);
