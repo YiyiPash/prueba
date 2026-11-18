@@ -75,6 +75,20 @@ label{display:grid;gap:4px;font-size:13px;font-weight:600}
       <p class="err" id="eForm" hidden></p>
       <button class="btn" type="submit" id="bGuardar">Guardar cambios</button>
     </form>
+    <div class="card" id="pink" hidden>
+      <h2>Pink Club</h2>
+      <p class="mu" id="pkEstado"></p>
+      <div id="pkPapel" class="lista"></div>
+      <form id="fPapel" class="lista" hidden>
+        <p class="mu" style="font-weight:600;color:var(--fg)">Agregar nota de papel de 2026</p>
+        <p class="mu">Suma para entrar ($999), no da puntos. Antes de guardarla, revisa que sea de la clienta y márcala en el papel ("PINK ✓"). Se reciben hasta el <span id="pkHasta"></span>.</p>
+        <label for="pFolio">Número de la nota<input id="pFolio" autocomplete="off"></label>
+        <label for="pFecha">Fecha de la nota<input type="date" id="pFecha" min="2026-01-01"></label>
+        <label for="pMonto">Total pagado<input id="pMonto" type="number" inputmode="decimal" min="1" step="0.01"></label>
+        <p class="err" id="ePapel" hidden></p>
+        <button class="btn" type="submit" id="bPapel">Agregar nota de papel</button>
+      </form>
+    </div>
     <div class="card" id="historial" hidden></div>
   </section>
 </div>
@@ -124,8 +138,34 @@ function pintar(c,msg){
   error('eForm','');
   $('historial').hidden=!c.cambios.length;
   $('historial').innerHTML='<h2>Cambios</h2>'+c.cambios.map(x=>'<div class="ev"><b>'+esc(NOMBRES[x.campo]||x.campo)+'</b> · '+esc(x.por)+' · '+esc(x.fecha)+'<br>'+esc(x.antes||'(vacío)')+' → '+esc(x.despues||'(vacío)')+'</div>').join('');
+  pintarPink(c.pink);
   scrollTo(0,0);
 }
+const fmt=n=>Number(n||0).toLocaleString('es-MX');
+function pintarPink(k){
+  $('pink').hidden=!k;if(!k)return;
+  if(k.sin_cuenta){$('pkEstado').textContent='Todavía no tiene cuenta Pink'+(k.cuenta_id!==actual.id?' (acumula en '+k.cuenta_id+')':'')+'.';$('pkPapel').innerHTML='';$('fPapel').hidden=true;return;}
+  const de=k.cuenta_id!==actual.id?' · acumula en '+k.cuenta_id:'';
+  $('pkEstado').textContent=(k.estado==='Activa'?'Activa'+(k.founder?' · Founder':'')+' · '+fmt(k.saldo)+' puntos':k.estado==='Registrada'?'Lleva $'+fmt(k.acumulado)+': le faltan $'+fmt(k.falta)+' para entrar':k.estado)+de;
+  $('pkPapel').innerHTML=k.papel.map(x=>'<div class="ev"><b>Nota de papel '+esc(x.folio)+'</b> · $'+fmt(x.monto)+'<br>'+esc(x.motivo.replace(/:.*/,''))+' · revisó '+esc(x.por)+' el '+esc(x.fecha)+'</div>').join('');
+  $('fPapel').hidden=!k.acepta_papel||k.estado==='Baja';$('pkHasta').textContent=k.hasta;
+  $('pFecha').max=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+  error('ePapel','');
+}
+$('fPapel').onsubmit=async e=>{
+  e.preventDefault();error('ePapel','');
+  if(!$('por').value.trim())return error('ePapel','Arriba, en "¿Quién hace el cambio?", escribe quién revisó la nota.');
+  if(!$('pFolio').value.trim()||!$('pFecha').value||!(Number($('pMonto').value)>0))return error('ePapel','Escribe el número, la fecha y el total de la nota.');
+  if(!confirm('¿Agregar la nota '+$('pFolio').value.trim()+' por $'+fmt($('pMonto').value)+'? Ya no se puede volver a usar.'))return;
+  $('bPapel').disabled=true;
+  try{
+    const r=await api('consent_nota_papel',{id:actual.id,folio:$('pFolio').value,fecha:$('pFecha').value,monto:$('pMonto').value,por:$('por').value.trim()});
+    actual.pink=r.pink;pintarPink(r.pink);
+    ['pFolio','pFecha','pMonto'].forEach(k=>{$(k).value='';});
+    $('aviso').textContent='Nota de papel agregada.'+(r.founder?' Con eso juntó $999: ya es Founder.':'');$('aviso').hidden=false;scrollTo(0,0);
+  }catch(x){error('ePapel',x.message);}
+  $('bPapel').disabled=false;
+};
 $('q').oninput=buscar;
 $('res').onclick=async e=>{
   const b=e.target.closest('[data-id]');if(!b)return;
