@@ -194,7 +194,7 @@ nav.tabs [role="tab"][aria-selected="true"]{background:var(--fr-fondo);color:#ff
 <section role="tabpanel" id="panel-puntos" aria-labelledby="tab-puntos">
   <h1 class="sr" tabindex="-1">Mis puntos</h1>
   <article class="cred" style="margin-top:12px" aria-label="Tu tarjeta Pink Club">
-    <span class="pill">Pink Club</span> <span class="pill fund" hidden>Fundadora</span>
+    <span class="pill">Pink Club</span> <span class="pill fund" hidden>Founder</span>
     <p class="num"><span id="saldo">0</span><small>puntos</small></p>
     <p class="eq">Cada punto vale $1 en joyería</p>
     <dl class="pie">
@@ -203,8 +203,9 @@ nav.tabs [role="tab"][aria-selected="true"]{background:var(--fr-fondo);color:#ff
     </dl>
   </article>
   <dl class="card">
+    <div class="fila" id="f-llave" hidden><dt class="lab">Para entrar al club</dt><dd class="val" id="llave"></dd></div>
     <div class="fila"><dt class="lab">Regalo de cumpleaños</dt><dd class="val" id="cumple1"></dd></div>
-    <div class="fila"><dt class="lab">Tus puntos</dt><dd class="val">Duran 12 meses si nos visitas al menos cada 6</dd><dd class="det" id="vence"></dd></div>
+    <div class="fila"><dt class="lab">Tus puntos</dt><dd class="val">Duran 6 meses y se renuevan con cada compra</dd><dd class="det" id="vence"></dd></div>
   </dl>
   <h2 class="sub">Tus compras</h2>
   <ul class="card lista" id="movs"></ul>
@@ -219,10 +220,10 @@ nav.tabs [role="tab"][aria-selected="true"]{background:var(--fr-fondo);color:#ff
 <section role="tabpanel" id="panel-beneficios" aria-labelledby="tab-beneficios" hidden>
   <h1 class="titulo" tabindex="-1">Beneficios</h1>
   <ul class="lista">
-    <li class="ben"><div class="val">Gana con cada compra</div><div class="det" id="b-ppp">1 punto por cada $10</div></li>
+    <li class="ben"><div class="val">Gana con cada compra</div><div class="det" id="b-ppp">Después de tus primeros $999, 1 punto por cada $20</div></li>
     <li class="ben"><div class="val">Úsalos en joyería</div><div class="det" id="b-min">Cada punto vale $1, desde 50 puntos</div></li>
-    <li class="ben"><div class="val">Un regalo en tu cumpleaños</div><div class="det">Una pieza sorpresa Pink en tu mes</div></li>
-    <li class="ben"><div class="val">Tus puntos te esperan</div><div class="det">Duran 12 meses; visítanos al menos cada 6</div></li>
+    <li class="ben"><div class="val">Un regalo en tu cumpleaños</div><div class="det">Un artículo de regalo en tu mes</div></li>
+    <li class="ben"><div class="val">Tus puntos te esperan</div><div class="det">Duran 6 meses y cada compra los renueva</div></li>
   </ul>
   <div class="legal"><a href="terminos.html">Términos y condiciones</a></div>
 </section>
@@ -231,7 +232,7 @@ nav.tabs [role="tab"][aria-selected="true"]{background:var(--fr-fondo);color:#ff
   <h1 class="titulo" tabindex="-1">Mis datos</h1>
   <article class="cred grande" aria-label="Tu credencial">
     <div class="foto-cred" id="foto-cred" aria-hidden="true"></div>
-    <span class="pill">Pink Club</span> <span class="pill fund" hidden>Fundadora</span>
+    <span class="pill">Pink Club</span> <span class="pill fund" hidden>Founder</span>
     <dl style="margin-top:20px"><dt>ID de miembro</dt><dd class="id" id="id2"></dd></dl>
     <p class="v" style="margin-top:6px" id="nombre2"></p>
   </article>
@@ -385,23 +386,25 @@ function pintar(){
   $('cumple2').innerHTML=p.cumple?esc(cumpleTxt):'<button class="enlace" type="button" onclick="pedirFecha()">Agregar</button>';
   $('vence').textContent=!c.vence?'':(c.vence_tipo==='antiguedad'?fmt(c.vence_pts)+' puntos cumplen 12 meses y vencen el '+fecha(c.vence)+'. Úsalos antes.':'Si no nos visitas antes del '+fecha(c.vence)+', vencen.');
   $('vence').hidden=!c.vence;
+  $('f-llave').hidden=c.estado!=='Registrada';
+  $('llave').textContent='Te faltan $'+fmt(c.falta)+' en compras. Después de tus primeros $'+fmt(c.umbral||999)+' empiezas a ganar puntos.';
   $('d-wa').innerHTML='<span aria-hidden="true">•••• •••• </span><span class="sr">termina en </span>'+esc(p.wa4);
   $('d-email').textContent=p.email||'Sin correo';
   $('d-mkt').textContent=p.marketing?'Sí':'No';
   $('b-corregir').href=waLink('Hola, soy '+quien()+' y quiero corregir un dato de mi Pink Club.');
-  $('b-ppp').textContent='1 punto por cada $'+D.estudio.pesos_por_punto;
+  $('b-ppp').textContent=(c.estado==='Activa'?'':'Después de tus primeros $'+fmt(c.umbral||999)+', ')+'1 punto por cada $'+D.estudio.pesos_por_punto;
   $('b-min').textContent='Cada punto vale $1, desde '+D.estudio.minimo_canje+' puntos';
   $('nota-lanz').hidden=new Date().toISOString().slice(0,10)>=LANZAMIENTO;
   pintarMovs();pintarExp();pintarFoto();
 }
 function pintarMovs(){
-  const nombres={Acumula:'Compra',Canje:'Canje de puntos','Cumpleaños':'Regalo de cumpleaños',Ajuste:'Puntos del estudio',Vence:'Puntos vencidos',Vencimiento:'Puntos vencidos',Baja:'Baja'};
+  const nombres={Acumula:'Compra',Compra_Previa:'Nota anterior',Vence_Membresia:'Membresía vencida',Canje:'Canje de puntos','Cumpleaños':'Regalo de cumpleaños',Ajuste:'Puntos del estudio',Vence:'Puntos vencidos',Vencimiento:'Puntos vencidos',Baja:'Baja'};
   const L=D.movimientos||[];
   $('movs').innerHTML=L.length?L.map(m=>{
     const tit=m.tipo==='Acumula'&&!m.puntos&&m.monto?'Compra':(nombres[m.tipo]||m.tipo);
     const det=fecha(m.fecha)+(m.nota?' · Nota '+m.nota:'');
     const pts=m.puntos?'<div class="pts'+(m.puntos<0?' menos':'')+'">'+(m.puntos>0?'+':'−')+fmt(Math.abs(m.puntos))+' pts</div>':'';
-    const monto=m.tipo==='Acumula'&&m.monto?'<div class="monto">$'+fmt(m.monto)+'</div>':'';
+    const monto=(m.tipo==='Acumula'||m.tipo==='Compra_Previa')&&m.monto?'<div class="monto">$'+fmt(m.monto)+'</div>':'';
     return '<li class="fila dos"><div><div class="val">'+esc(tit)+'</div><div class="det">'+esc(det)+'</div></div><div class="der">'+monto+pts+'</div></li>';
   }).join(''):'<li class="vacio">Aquí verás tus compras y tus puntos.</li>';
 }

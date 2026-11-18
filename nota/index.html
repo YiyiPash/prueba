@@ -1212,7 +1212,7 @@ function renderPink(){
     else if(p.estado==='Activa')info=`<b>${fmtN(p.saldo)} pts</b> disponibles${p.vence?` · vencen el ${esc(p.vence)}`:''}`;
     else if(p.estado==='Registrada')info=`<b>${fmtN(p.saldo)} pts</b> · le faltan <b>$${fmtN(p.falta_activar)}</b> en compras para activar y poder canjear`;
     else info=esc(p.estado);
-    if(p.regalo_cumple)info+=`<br>🎁 <b>Tiene su regalo de cumpleaños</b>: márcalo en la pieza de regalo (hasta $140)`;
+    if(p.regalo_cumple)info+=`<br>🎁 <b>Tiene su regalo de cumpleaños</b>: márcalo en el artículo de regalo: arete, collar… (hasta $${fmtN(p.tope_regalo||200)})`;
     const acts=[];
     if(!esPaga)acts.push(`<button class="pk-mini" onclick="pinkSetPaga('${esc(p.id)}')">Ella paga</button>`);
     if(esPaga&&p.puede_canjear)acts.push(`<button class="pk-mini ${pk.canje?'on':''}" onclick="pinkToggleCanje()">${pk.canje?'✓ Usando puntos':'Usar puntos'}</button>`);
@@ -1232,7 +1232,7 @@ function renderPinkResumen(){
   const tab=getTab(),pk=tab.pink;
   if(!pk.canje){el.innerHTML='';return;}
   const p=pk.personas.find(x=>x.id===pk.paga),usados=pinkPuntosUsados(tab),saldo=p?p.saldo:0;
-  el.innerHTML=`<div class="pk-resumen ${usados>saldo?'mal':''}">Usando <b>${fmtN(usados)}</b> de ${fmtN(saldo)} pts. Escribe los puntos en cada pieza (la perforación y los servicios no se pagan con puntos).</div>`;
+  el.innerHTML=`<div class="pk-resumen ${usados>saldo?'mal':''}">Usando <b>${fmtN(usados)}</b> de ${fmtN(saldo)} pts. Escribe los puntos en cada pieza (la perforación y los servicios no se pagan con puntos). <b>No uses puntos en productos en promoción o con descuento.</b></div>`;
 }
 
 // Por artículo: quién recibe, regalo de cumpleaños y puntos
@@ -1274,8 +1274,10 @@ function onItemRegalo(id,on){
 }
 function onItemPuntos(id,val){
   const it=getTab().items.find(i=>i.id===id);if(!it)return;
-  const max=pinkMaxPuntos(it),v=Math.max(0,Math.floor(Number(val)||0));
-  if(v>max){it.puntos_aplicados=max;toast(`⚠️ Máximo ${max} puntos en esta pieza`);renderItems();return;}
+  const tab=getTab(),p=tab.pink.personas.find(x=>x.id===tab.pink.paga);
+  const libres=Math.max(0,Math.floor((p?p.saldo:0)-(pinkPuntosUsados(tab)-(it.puntos_aplicados||0))));   // no deja pasar del saldo
+  const max=Math.min(pinkMaxPuntos(it),libres),v=Math.max(0,Math.floor(Number(val)||0));
+  if(v>max){it.puntos_aplicados=max;toast(max<pinkMaxPuntos(it)?`⚠️ Solo le quedan ${max} puntos`:`⚠️ Máximo ${max} puntos en esta pieza`);renderItems();return;}
   it.puntos_aplicados=v;
   const n=document.getElementById('pk-neto-'+id);if(n)n.textContent='$'+fmtN(importeNeto(it));
   updateTotal();

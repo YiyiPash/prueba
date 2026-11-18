@@ -870,7 +870,7 @@ function renderPink(){
   }
   const e=edad($('fn').value);
   $('pinkCard').innerHTML=`<h2>¿Quieres unirte al Pink Club? 💗</h2>
-    <p class="hint" style="margin:0">Es gratis: 1 punto por cada $10 de compra. Al llegar a $500 se activa y cambias tus puntos por joyería.${e!==null&&e<12?' Como eres menor de 12, tus compras suman en la cuenta de tu tutor.':''}</p>
+    <p class="hint" style="margin:0">Es gratis. Al juntar tus primeros $999 en compras entras al club y desde ahí ganas 1 punto por cada $20 para cambiar por joyería.${e!==null&&e<12?' Como eres menor de 12, tus compras suman en la cuenta de tu tutor.':''}</p>
     <div class="seg" id="segPink"><button class="chip" type="button" data-v="si" aria-pressed="${S.pink==='si'}">Sí</button><button class="chip" type="button" data-v="no" aria-pressed="${S.pink==='no'}">No</button></div>
     <div id="pinkExtra"></div>`;
   seg('segPink','pink');renderPinkExtra();
