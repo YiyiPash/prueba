@@ -363,7 +363,13 @@ async function iniciar(){
   S=ses.get();
   if(!S){vista('v-entrada');if(viejo)$('e-entrar').textContent='Los links personales ya no se usan. Escribe tu WhatsApp o tu correo y toca "Enviar código por correo para ingresar".';return;}
   try{mostrar(await api({action:'pink_app',sesion:S},false));}
-  catch(e){if(S){vista('v-entrada');$('e-entrar').textContent=e.message;}}
+  catch(e){
+    // Sesión guardada que ya no sirve (por ejemplo, la cuenta se juntó con otra): se olvida sin asustar.
+    // Solo se avisa si no hubo internet (la sesión se queda) o si la cerraron desde otro dispositivo.
+    const red=/conectar/.test(e.message);
+    if(!red){ses.del();S=null;}
+    vista('v-entrada');$('e-entrar').textContent=(red||/sesión terminó/.test(e.message))?e.message:'';
+  }
 }
 // Después de entrar (contraseña o código): guarda la sesión y, si no tiene contraseña, se la pide una vez
 function entro(r){
