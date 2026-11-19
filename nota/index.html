@@ -1184,22 +1184,26 @@ function pinkAgregarPersona(p){
 function pinkSetPaga(id,auto){
   const tab=getTab(),pk=tab.pink;
   pk.paga=id;pk.canje=false;tab.items.forEach(it=>{it.puntos_aplicados=0;});
-  const p=pk.personas.find(x=>x.id===id);
+  pinkDatosPaga(tab);
+  if(!auto){renderPink();renderItems();}
+}
+// Nombre y correo de la nota siguen a quien paga: si cambia o se quita, se cambian o se borran.
+// Solo toca lo que puso la nota sola; si alguien escribió otro nombre o correo, se respeta.
+function pinkDatosPaga(tab){
+  const pk=tab.pink,p=pk.personas.find(x=>x.id===pk.paga);
   const nom=document.getElementById('nombre-clienta');
   const nomNota=p?(p.apodo||p.nombre):'';                 // en la nota va el apodo
-  if(p&&!nom.value.trim()){nom.value=nomNota;onNombre(nomNota);}
-  // Correo del registro de quien paga: se pone solo en "correos de la nota" (se puede quitar). Si cambia quien paga, se cambia.
+  if(!nom.value.trim()||(pk.nombre_auto&&nom.value===pk.nombre_auto)){nom.value=nomNota;onNombre(nomNota);pk.nombre_auto=nomNota;}
   const ok=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e||'');
   if(pk.email_auto&&pk.email_auto!==(p&&p.email)){const k=tab.emails_nota.indexOf(pk.email_auto);if(k>=0)tab.emails_nota.splice(k,1);pk.email_auto='';}
   if(p&&ok(p.email)&&!tab.emails_nota.includes(p.email)){tab.emails_nota.push(p.email);pk.email_auto=p.email;}
   renderEmailChips();
-  if(!auto){renderPink();renderItems();}
 }
 function pinkQuitar(id){
   const tab=getTab(),pk=tab.pink;
   pk.personas=pk.personas.filter(x=>x.id!==id);
   tab.items.forEach(it=>{if(it.id_receptora===id){it.id_receptora='';it.regalo_cumple=false;}});
-  if(pk.paga===id){pk.paga=pk.personas[0]?pk.personas[0].id:'';pk.canje=false;tab.items.forEach(it=>{it.puntos_aplicados=0;});}
+  if(pk.paga===id){pk.paga=pk.personas[0]?pk.personas[0].id:'';pk.canje=false;tab.items.forEach(it=>{it.puntos_aplicados=0;});pinkDatosPaga(tab);}
   renderPink();renderItems();
 }
 function pinkToggleCanje(){
