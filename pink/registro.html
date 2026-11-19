@@ -22,7 +22,6 @@
     <label>Nombre completo<input type="text" id="nombre" placeholder="Nombre y apellidos" autocomplete="name"></label>
     <label>Fecha de nacimiento<input type="date" id="fn" onchange="revisarEdad()"></label>
     <label>WhatsApp <span class="opc">(10 dígitos)</span><input type="tel" id="wa" inputmode="numeric" placeholder="5512345678" autocomplete="tel-national"></label>
-    <label>Correo <span class="opc">(opcional)</span><input type="email" id="email" placeholder="correo@ejemplo.com" autocomplete="email"></label>
 
     <div class="caja" id="menor" style="display:none">
       <div class="caja-tit" id="menor-tit">Eres menor de edad: necesitamos los datos de tu mamá, papá o tutor</div>
@@ -32,6 +31,14 @@
       <label id="tfn-wrap" style="display:none">Fecha de nacimiento del tutor<input type="date" id="tfn"></label>
     </div>
 
+    <div class="caja" id="acceso">
+      <div class="caja-tit" id="acceso-tit">Para entrar a tu Pink Club</div>
+      <label><span id="email-lab">Tu correo</span><input type="email" id="email" placeholder="correo@ejemplo.com" autocomplete="email" autocapitalize="off" spellcheck="false"></label>
+      <label>Crea una contraseña <span class="opc">(mínimo 8 letras o números)</span><input type="password" id="pass1" autocomplete="new-password"></label>
+      <label>Escríbela otra vez<input type="password" id="pass2" autocomplete="new-password"></label>
+      <p style="font-size:13px;margin:0" id="acceso-txt">Te mandamos un código a tu correo para confirmarlo.</p>
+    </div>
+
     <label class="check"><input type="checkbox" id="c-aviso"> <span>Acepto el <a href="aviso.html" target="_blank">aviso de privacidad</a> y los <a href="terminos.html" target="_blank">términos del Pink Club</a>.</span></label>
     <label class="check" id="c-mkt-wrap"><input type="checkbox" id="c-mkt"> <span>Quiero recibir promociones por WhatsApp (opcional).</span></label>
 
@@ -39,12 +46,13 @@
     <p class="msg err" id="err"></p>
   </section>
 
-  <section class="card" id="ok-card" style="display:none;text-align:center">
-    <h2>¡Ya eres parte del Pink Club! 💗</h2>
-    <p style="font-size:14px;color:var(--mu)">Tu ID de miembro es:</p>
-    <div class="id-grande" id="ok-id"></div>
-    <p style="font-size:13px" id="ok-txt"></p>
-    <a class="btn sec" href="./" style="margin-top:14px">Entrar a mi Pink Club</a>
+  <section class="card" id="cod-card" style="display:none">
+    <h2>Revisa tu correo 💌</h2>
+    <p style="font-size:14px" id="cod-txt"></p>
+    <label>Código de 6 números<input type="text" id="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6"></label>
+    <button class="btn" id="btn-cod" onclick="confirmar()">Entrar a mi Pink Club</button>
+    <p class="msg err" id="err-cod"></p>
+    <p style="font-size:13px">¿No te llegó? Revisa en correo no deseado o <a href="#" onclick="otroCodigo();return false">pide otro código</a>.</p>
   </section>
 </main>
 
@@ -69,6 +77,9 @@ function revisarEdad(){
   $('menor').style.display=menor?'block':'none';
   $('tfn-wrap').style.display=peque?'block':'none';
   $('c-mkt-wrap').style.display=menor?'none':'flex';
+  // Menor de 12: no entra sola; el correo y la contraseña son de su mamá, papá o tutor
+  $('acceso-tit').textContent=peque?'Para que tu mamá, papá o tutor entre al Pink Club':'Para entrar a tu Pink Club';
+  $('email-lab').textContent=peque?'Correo de tu mamá, papá o tutor':'Tu correo';
   $('menor-tit').textContent=peque
     ?'Eres menor de 12: tus compras suman en la cuenta de tu mamá, papá o tutor. Escribe sus datos y también quedará registrado.'
     :'Eres menor de edad: necesitamos los datos de tu mamá, papá o tutor.';
@@ -78,6 +89,25 @@ async function post(data){
   const j=await r.json();
   if(!j.ok)throw new Error(j.error||'No se pudo registrar');
   return j.data;
+}
+let USUARIO='';
+async function api(o){
+  const r=await fetch(AS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(o),redirect:'follow'});
+  const j=await r.json();if(!j.ok)throw new Error(j.error||'No se pudo conectar. Intenta de nuevo.');return j.data;
+}
+async function confirmar(){
+  const c=val('codigo').replace(/\D/g,''),err=$('err-cod');err.textContent='';
+  if(c.length!==6)return err.textContent='El código tiene 6 números.';
+  const b=$('btn-cod');b.disabled=true;b.textContent='Entrando...';
+  try{const r=await api({action:'pink_codigo_entrar',usuario:USUARIO,codigo:c,recordar:true});
+    try{localStorage.setItem('yppc_sesion',r.sesion);}catch(_){}
+    location.href='./';}
+  catch(x){err.textContent=x.message;b.disabled=false;b.textContent='Entrar a mi Pink Club';}
+}
+async function otroCodigo(){
+  const err=$('err-cod');err.textContent='';
+  try{const r=await api({action:'pink_codigo',usuario:USUARIO});err.textContent='Listo, te mandamos otro a '+r.enviado_a+'.';}
+  catch(x){err.textContent=x.message;}
 }
 async function registrar(){
   const err=$('err');err.textContent='';
@@ -89,28 +119,33 @@ async function registrar(){
   if(e<18&&(!val('tnombre')||!val('tpar')||digitos(val('twa')).length!==10))return err.textContent='Faltan los datos del tutor (nombre, parentesco y WhatsApp de 10 dígitos).';
   if(e<12&&edadDe(val('tfn'))===null)return err.textContent='Escribe la fecha de nacimiento del tutor.';
   if(e<12&&edadDe(val('tfn'))<18)return err.textContent='El tutor debe ser mayor de edad.';
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val('email')))return err.textContent='Escribe tu correo: ahí te llega el código para entrar.';
+  if($('pass1').value.length<8)return err.textContent='Tu contraseña debe tener al menos 8 letras o números.';
+  if($('pass1').value!==$('pass2').value)return err.textContent='Las dos contraseñas no son iguales.';
   if(!$('c-aviso').checked)return err.textContent='Para registrarte debes aceptar el aviso de privacidad y los términos.';
 
   const btn=$('btn');btn.disabled=true;btn.textContent='Registrando...';
   try{
-    const datos={apodo:val('apodo'),nombre_completo:val('nombre'),fecha_nacimiento:val('fn'),whatsapp:val('wa'),email:val('email'),
+    const acceso={email:val('email'),contrasena:$('pass1').value};
+    const datos={apodo:val('apodo'),nombre_completo:val('nombre'),fecha_nacimiento:val('fn'),whatsapp:val('wa'),
       consent_aviso:true,consent_marketing_wa:e>=18&&$('c-mkt').checked,consent_fotos:false};
     let tutorId='';
     if(e<18)Object.assign(datos,{tutor_nombre:val('tnombre'),tutor_parentesco:val('tpar'),tutor_whatsapp:val('twa')});
+    if(e>=12)Object.assign(datos,acceso);
+    let cod=null;
     if(e<12){
       const t=await post({apodo:val('tnombre').split(/\s+/)[0],nombre_completo:val('tnombre'),fecha_nacimiento:val('tfn'),
-        whatsapp:val('twa'),consent_aviso:true,consent_marketing_wa:false,consent_fotos:false});
-      tutorId=t.id_clienta;datos.id_tutor=tutorId;
+        whatsapp:val('twa'),consent_aviso:true,consent_marketing_wa:false,consent_fotos:false,...acceso});
+      tutorId=t.id_clienta;datos.id_tutor=tutorId;cod=t;
     }
     const r=await post(datos);
-    $('form-card').style.display='none';$('ok-card').style.display='block';
-    $('ok-id').textContent=r.id_clienta;
-    // Persona nueva: el servidor regresa su llave y entra directo a la app en este celular
-    if(r.llave){try{localStorage.setItem('yppc_llave',r.llave);if(r.pase)localStorage.setItem('yppc_pase',r.pase);}catch(_){}}
-    $('ok-txt').innerHTML=(r.duplicada?'Ya estabas registrada con este ID. ':'')+
-      (e<12?`Tus compras suman en la cuenta de tu tutor (<b>${tutorId}</b>). `:'')+
-      (r.llave?'Ya puedes entrar a tu Pink Club con el botón de abajo y este dispositivo te va a recordar. Si un día quieres entrar desde otro, pídenos tu link personal por WhatsApp.'
-        :'<b>En unos minutos te mandamos por WhatsApp tu link personal.</b> Con él verás tus puntos, tus perforaciones y tus cuidados. Mientras, puedes entrar con tu WhatsApp y tu fecha de nacimiento.');
+    if(!cod)cod=r;
+    // Le mandamos un código al correo; con él entra y este dispositivo la recuerda
+    USUARIO=acceso.email;
+    $('form-card').style.display='none';$('cod-card').style.display='block';
+    $('cod-txt').innerHTML=(r.duplicada?'Ya estabas registrada con el ID <b>'+r.id_clienta+'</b>. ':'Tu ID de miembro es <b>'+r.id_clienta+'</b>. ')+
+      (e<12?'Sus compras suman en la cuenta de su tutor (<b>'+tutorId+'</b>). ':'')+
+      'Te mandamos un código de 6 números a <b>'+(cod.enviado_a||'tu correo')+'</b>. Escríbelo aquí para entrar.';
     window.scrollTo(0,0);
   }catch(x){err.textContent=x.message;}
   finally{btn.disabled=false;btn.textContent='Registrarme 💗';}

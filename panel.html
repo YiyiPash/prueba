@@ -100,7 +100,7 @@ async function api(action,data){
 function error(id,msg){$(id).textContent=msg||'';$(id).hidden=!msg;}
 async function buscar(){
   const mio=++turno;
-  if(!leer('yp_pink_clave')){error('eLista','Este celular no tiene la clave. Ponla en Inicio.');return;}
+  if(!leer('yp_pink_clave')){error('eLista','Este dispositivo no tiene la clave. Ponla en Inicio.');return;}
   error('eLista','');$('estado').textContent='Buscando…';
   try{
     const d=await api('consent_nota_buscar',{q:$('q').value.trim()});

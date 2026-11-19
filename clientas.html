@@ -115,7 +115,7 @@ function cargarLista(){
 }
 async function buscar(){
   error('eBuscar','');
-  if(!leer('yp_pink_clave'))return error('eBuscar','Este celular no tiene la clave. Ponla en Inicio.');
+  if(!leer('yp_pink_clave'))return error('eBuscar','Este dispositivo no tiene la clave. Ponla en Inicio.');
   const raw=$('q').value.trim(),q=norm(raw),qd=raw.replace(/\D/g,''),qu=raw.toUpperCase();
   if(q.length<2){$('res').innerHTML='';$('estado').textContent='';return;}
   if(!LISTA){$('estado').textContent='Cargando clientas…';

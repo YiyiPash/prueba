@@ -1143,7 +1143,7 @@ async function pinkPedirClave(forzar){
   try{
     await pinkApi('pink_validar_clave',{clave:c.trim()});
     localStorage.setItem('yp_pink_clave',c.trim());renderPinkClaveBtn();
-    toast('✅ Clave guardada en este celular');return true;
+    toast('✅ Clave guardada en este dispositivo');return true;
   }catch(e){toast('❌ '+e.message);return false;}
 }
 function pinkEstadoCls(e){return ['Activa','Registrada','Baja'].includes(e)?e:'Sin';}
