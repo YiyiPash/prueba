@@ -42,6 +42,9 @@
     <label class="check"><input type="checkbox" id="c-aviso"> <span>Acepto el <a href="aviso.html" onclick="return verDoc(this)">aviso de privacidad</a> y los <a href="terminos.html" onclick="return verDoc(this)">términos del Pink Club</a>.</span></label>
     <label class="check" id="c-mkt-wrap"><input type="checkbox" id="c-mkt"> <span>Quiero recibir promociones por WhatsApp (opcional).</span></label>
 
+    <!-- Trampa para robots: escondida; una persona no la ve ni la llena -->
+    <div class="trampa" aria-hidden="true"><label>Tu sitio web<input type="text" id="web" tabindex="-1" autocomplete="off"></label></div>
+
     <button class="btn" id="btn" onclick="registrar()">Registrarme 💗</button>
     <p class="msg err" id="err"></p>
   </section>
@@ -122,7 +125,7 @@ function revisarEdad(){
     :'Eres menor de edad: necesitamos los datos de tu mamá, papá o tutor.';
 }
 async function post(data){
-  const r=await fetch(AS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(Object.assign({action:'pink_registrar',origen:'QR'},data)),redirect:'follow'});
+  const r=await fetch(AS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(Object.assign({action:'pink_registrar',origen:'QR',web:$('web').value},data)),redirect:'follow'});
   const j=await r.json();
   if(!j.ok)throw new Error(j.error||'No se pudo registrar');
   return j.data;
