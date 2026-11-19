@@ -1,0 +1,43 @@
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{--p:#be185d;--pm:#ec4899;--pl:#fdf2f8;--pb:#fce7f3;--tx:#1f2937;--mu:#6b7280;--ok:#15803d;--bad:#b91c1c;}
+body{font-family:'Poppins',system-ui,sans-serif;background:var(--pl);color:var(--tx);min-height:100vh;padding:0 16px 40px;line-height:1.5;}
+.hero{max-width:480px;margin:0 auto;padding:28px 4px 18px;text-align:center;}
+.logo{font-size:13px;font-weight:700;letter-spacing:4px;color:var(--p);text-transform:lowercase;}
+.hero h1{font-size:30px;font-weight:700;color:var(--p);margin-top:4px;}
+.hero p{font-size:14px;color:var(--mu);margin-top:4px;}
+main{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:14px;}
+.card{background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(190,24,93,.10);padding:20px 18px;}
+.card h2{font-size:16px;color:var(--p);margin-bottom:12px;}
+label{display:block;font-size:11px;font-weight:600;color:var(--p);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;}
+label .opc{font-weight:400;color:var(--mu);text-transform:none;letter-spacing:0;}
+input[type=text],input[type=tel],input[type=email],input[type=date]{display:block;width:100%;margin-top:4px;border:1.5px solid var(--pb);border-radius:10px;padding:11px 12px;font-family:inherit;font-size:15px;color:var(--tx);background:#fff;outline:none;-webkit-appearance:none;appearance:none;}
+input:focus{border-color:var(--p);}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:13px;font-weight:400;color:var(--tx);text-transform:none;letter-spacing:0;margin:10px 0;cursor:pointer;}
+.check input{margin-top:4px;width:18px;height:18px;accent-color:var(--p);flex-shrink:0;}
+.check a{color:var(--p);}
+.btn{display:block;width:100%;text-align:center;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--p),var(--pm));color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;margin-top:6px;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn.sec{background:var(--pl);color:var(--p);border:2px solid var(--pb);}
+.caja{background:var(--pl);border-radius:12px;padding:12px;margin:8px 0 12px;}
+.caja-tit{font-size:12px;font-weight:600;color:var(--p);margin-bottom:8px;}
+.msg{margin-top:14px;font-size:14px;}
+.msg.err{color:var(--bad);}
+.res{margin-top:16px;text-align:center;}
+.res .hola{font-size:15px;color:var(--mu);}
+.res .pts{font-size:48px;font-weight:700;color:var(--p);line-height:1.1;margin:4px 0;}
+.res .pts small{font-size:16px;font-weight:600;}
+.res .estado{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;margin:4px 0 8px;}
+.estado.Activa{background:#dcfce7;color:var(--ok);}.estado.Registrada{background:#fef9c3;color:#92400e;}.estado.Baja{background:#f3f4f6;color:var(--mu);}
+.res p{font-size:13px;color:var(--tx);margin-top:6px;}
+.id-grande{font-size:34px;font-weight:700;color:var(--p);letter-spacing:2px;margin:8px 0;}
+.pasos{padding-left:20px;font-size:14px;}
+.pasos li{margin-bottom:6px;}
+footer{max-width:480px;margin:18px auto 0;text-align:center;font-size:12px;color:var(--mu);}
+footer a{color:var(--p);text-decoration:none;margin:0 6px;white-space:nowrap;}
+.legal{font-size:14px;}
+.legal h2{margin-top:6px;}
+.legal ol{padding-left:20px;}
+.legal li{margin-bottom:10px;}
+.legal ul{padding-left:18px;margin-top:4px;}
+.legal .fecha{font-size:12px;color:var(--mu);margin-top:14px;}
+.volver{display:inline-block;margin:0 0 4px;font-size:13px;color:var(--p);text-decoration:none;}
