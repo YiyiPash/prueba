@@ -1188,6 +1188,11 @@ function pinkSetPaga(id,auto){
   const nom=document.getElementById('nombre-clienta');
   const nomNota=p?(p.apodo||p.nombre):'';                 // en la nota va el apodo
   if(p&&!nom.value.trim()){nom.value=nomNota;onNombre(nomNota);}
+  // Correo del registro de quien paga: se pone solo en "correos de la nota" (se puede quitar). Si cambia quien paga, se cambia.
+  const ok=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e||'');
+  if(pk.email_auto&&pk.email_auto!==(p&&p.email)){const k=tab.emails_nota.indexOf(pk.email_auto);if(k>=0)tab.emails_nota.splice(k,1);pk.email_auto='';}
+  if(p&&ok(p.email)&&!tab.emails_nota.includes(p.email)){tab.emails_nota.push(p.email);pk.email_auto=p.email;}
+  renderEmailChips();
   if(!auto){renderPink();renderItems();}
 }
 function pinkQuitar(id){
@@ -1212,6 +1217,7 @@ function renderPink(){
     else if(p.estado==='Activa')info=`<b>${fmtN(p.saldo)} pts</b> disponibles${p.vence?` · vencen el ${esc(p.vence)}`:''}`;
     else if(p.estado==='Registrada')info=`<b>${fmtN(p.saldo)} pts</b> · le faltan <b>$${fmtN(p.falta_activar)}</b> en compras para activar y poder canjear`;
     else info=esc(p.estado);
+    if(!dep&&p.sin_aviso)info+=`<br>⚠️ <b>Aún no entra a su app del Pink Club</b>: esta compra no le dará puntos. Pídele que abra su link y acepte el aviso antes de cobrar.`;
     if(p.regalo_cumple)info+=`<br>🎁 <b>Tiene su regalo de cumpleaños</b>: márcalo en el artículo de regalo: arete, collar… (hasta $${fmtN(p.tope_regalo||200)})`;
     const acts=[];
     if(!esPaga)acts.push(`<button class="pk-mini" onclick="pinkSetPaga('${esc(p.id)}')">Ella paga</button>`);
