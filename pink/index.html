@@ -213,7 +213,7 @@ nav.tabs [role="tab"][aria-selected="true"]{background:var(--fr-fondo);color:#ff
   <h1 class="titulo" tabindex="-1" id="t-aviso">Antes de entrar</h1>
   <p class="lema" id="aviso-lema"></p>
   <form class="form" id="f-aviso" novalidate>
-    <label class="permiso"><input id="ok-aviso" type="checkbox"> <span>Acepto el <a class="link" href="aviso.html" target="_blank">aviso de privacidad</a> y los <a class="link" href="terminos.html" target="_blank">términos del Pink Club</a>.</span></label>
+    <label class="permiso"><input id="ok-aviso" type="checkbox"> <span>He leído y acepto el <a class="link" href="aviso.html" target="_blank">aviso de privacidad</a> y los <a class="link" href="terminos.html" target="_blank">términos del Pink Club</a>.</span></label>
     <button class="btn" id="b-aviso" type="submit">Entrar</button>
     <p class="err" id="e-aviso" role="alert"></p>
   </form>
@@ -336,11 +336,13 @@ function cargando(on,texto){
   $('cargador').hidden=CARGAS===0;
 }
 async function api(o,texto){
-  cargando(true,texto);
+  // texto===false: sin pantalla de carga (al abrir ya se ve "Abriendo tu Pink Club…")
+  const tapa=texto!==false;
+  if(tapa)cargando(true,texto);
   let j;
   try{const r=await fetch(AS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(o),redirect:'follow'});j=await r.json();}
   catch(_){throw new Error('No se pudo conectar. Revisa tu internet e intenta de nuevo.');}
-  finally{cargando(false);}
+  finally{if(tapa)cargando(false);}
   if(!j.ok){
     // Sesión vencida o cerrada desde otro dispositivo: de vuelta a la entrada
     if(S&&/sesión terminó/.test(j.error||'')){ses.del();S=null;D=null;vista('v-entrada');$('e-entrar').textContent=j.error;}
@@ -360,7 +362,7 @@ async function iniciar(){
   if(viejo)history.replaceState(null,'',location.pathname+location.search);
   S=ses.get();
   if(!S){vista('v-entrada');if(viejo)$('e-entrar').textContent='Los links personales ya no se usan. Escribe tu WhatsApp o tu correo y toca "Enviar código por correo para ingresar".';return;}
-  try{mostrar(await api({action:'pink_app',sesion:S}));}
+  try{mostrar(await api({action:'pink_app',sesion:S},false));}
   catch(e){if(S){vista('v-entrada');$('e-entrar').textContent=e.message;}}
 }
 // Después de entrar (contraseña o código): guarda la sesión y, si no tiene contraseña, se la pide una vez
