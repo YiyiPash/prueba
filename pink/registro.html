@@ -39,7 +39,7 @@
       <p style="font-size:13px;margin:0" id="acceso-txt">Te mandamos un código a tu correo para confirmarlo.</p>
     </div>
 
-    <label class="check"><input type="checkbox" id="c-aviso"> <span>Acepto el <a href="aviso.html" target="_blank">aviso de privacidad</a> y los <a href="terminos.html" target="_blank">términos del Pink Club</a>.</span></label>
+    <label class="check"><input type="checkbox" id="c-aviso"> <span>Acepto el <a href="aviso.html" onclick="return verDoc(this)">aviso de privacidad</a> y los <a href="terminos.html" onclick="return verDoc(this)">términos del Pink Club</a>.</span></label>
     <label class="check" id="c-mkt-wrap"><input type="checkbox" id="c-mkt"> <span>Quiero recibir promociones por WhatsApp (opcional).</span></label>
 
     <button class="btn" id="btn" onclick="registrar()">Registrarme 💗</button>
@@ -57,14 +57,51 @@
 </main>
 
 <footer>
-  <a href="./">Pink Club</a> · <a href="terminos.html">Términos</a> · <a href="aviso.html">Aviso de privacidad</a>
+  <a href="./">Pink Club</a> · <a href="terminos.html" onclick="return verDoc(this)">Términos</a> · <a href="aviso.html" onclick="return verDoc(this)">Aviso de privacidad</a>
 </footer>
+
+<!-- Aviso y términos encima del registro: al cerrar, lo que ya escribió sigue ahí -->
+<div id="doc" role="dialog" aria-modal="true" aria-label="Documento" hidden>
+  <iframe id="doc-frame" title="Documento"></iframe>
+  <div class="doc-bar"><button class="volver" type="button" onclick="cerrarDoc()">← Regresar al registro</button></div>
+</div>
+
+<div id="cargador" role="status" aria-live="polite" hidden><div class="giro" aria-hidden="true"></div><p id="cargador-txt">Cargando…</p></div>
 
 <script>
 const AS_URL='https://script.google.com/macros/s/AKfycbwOhVk8lowZwedDv-J0wOCparRSL1MZu9ybJXJ6oru5Br87eLRgtO6Ny10sv947ciuv/exec';
 const $=id=>document.getElementById(id);
 const val=id=>$(id).value.trim();
 const digitos=s=>String(s||'').replace(/\D/g,'');
+
+// Aviso y términos: se abren encima, sin salir del registro
+function verDoc(a){
+  const f=$('doc-frame');
+  f.onload=()=>{try{const v=f.contentDocument.querySelector('.volver');if(v)v.remove();}catch(_){}};
+  f.src=a.getAttribute('href');$('doc').hidden=false;document.body.style.overflow='hidden';
+  return false;
+}
+function cerrarDoc(){$('doc').hidden=true;document.body.style.overflow='';$('doc-frame').src='about:blank';}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('doc').hidden)cerrarDoc();});
+
+// Fechas de nacimiento: el calendario no deja elegir días después de hoy ni de hace más de 110 años
+(function(){
+  const h=new Date(),d=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0');
+  ['fn','tfn'].forEach(id=>{$(id).max=d;$(id).min=(h.getFullYear()-110)+'-01-01';});
+})();
+
+// Avisos junto al campo que hay que revisar (y no solo hasta abajo)
+function limpiarErr(){document.querySelectorAll('.campo-err').forEach(x=>x.remove());document.querySelectorAll('input.mal').forEach(x=>x.classList.remove('mal'));$('err').textContent='';}
+function F(msg,id){
+  const x=$(id),p=document.createElement('p');
+  p.className='campo-err';p.setAttribute('role','alert');p.textContent=msg;
+  const lab=x.closest('label');(lab||x).insertAdjacentElement('afterend',p);
+  if(x.type!=='checkbox')x.classList.add('mal');
+  x.scrollIntoView({block:'center',behavior:'smooth'});
+  try{x.focus({preventScroll:true});}catch(_){}
+  return false;
+}
+function cargando(on,t){$('cargador').hidden=!on;if(t)$('cargador-txt').textContent=t;}
 
 function edadDe(iso){
   const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return null;
@@ -98,11 +135,11 @@ async function api(o){
 async function confirmar(){
   const c=val('codigo').replace(/\D/g,''),err=$('err-cod');err.textContent='';
   if(c.length!==6)return err.textContent='El código tiene 6 números.';
-  const b=$('btn-cod');b.disabled=true;b.textContent='Entrando...';
+  const b=$('btn-cod');b.disabled=true;b.textContent='Entrando...';cargando(true,'Entrando a tu Pink Club…');
   try{const r=await api({action:'pink_codigo_entrar',usuario:USUARIO,codigo:c,recordar:true});
     try{localStorage.setItem('yppc_sesion',r.sesion);}catch(_){}
     location.href='./';}
-  catch(x){err.textContent=x.message;b.disabled=false;b.textContent='Entrar a mi Pink Club';}
+  catch(x){cargando(false);err.textContent=x.message;b.disabled=false;b.textContent='Entrar a mi Pink Club';}
 }
 async function otroCodigo(){
   const err=$('err-cod');err.textContent='';
@@ -110,21 +147,25 @@ async function otroCodigo(){
   catch(x){err.textContent=x.message;}
 }
 async function registrar(){
-  const err=$('err');err.textContent='';
-  const e=edadDe(val('fn'));
-  if(!val('apodo')||!val('nombre'))return err.textContent='Escribe tu apodo y tu nombre completo.';
-  if(e===null)return err.textContent='Escribe tu fecha de nacimiento.';
-  if(e<0||e>110)return err.textContent='Revisa tu fecha de nacimiento.';
-  if(digitos(val('wa')).length!==10)return err.textContent='Tu WhatsApp debe tener 10 dígitos.';
-  if(e<18&&(!val('tnombre')||!val('tpar')||digitos(val('twa')).length!==10))return err.textContent='Faltan los datos del tutor (nombre, parentesco y WhatsApp de 10 dígitos).';
-  if(e<12&&edadDe(val('tfn'))===null)return err.textContent='Escribe la fecha de nacimiento del tutor.';
-  if(e<12&&edadDe(val('tfn'))<18)return err.textContent='El tutor debe ser mayor de edad.';
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val('email')))return err.textContent='Escribe tu correo: ahí te llega el código para entrar.';
-  if($('pass1').value.length<8)return err.textContent='Tu contraseña debe tener al menos 8 letras o números.';
-  if($('pass1').value!==$('pass2').value)return err.textContent='Las dos contraseñas no son iguales.';
-  if(!$('c-aviso').checked)return err.textContent='Para registrarte debes aceptar el aviso de privacidad y los términos.';
+  const err=$('err');limpiarErr();
+  const e=edadDe(val('fn')),hoy=$('fn').max;
+  if(!val('apodo'))return F('Escribe cómo te gusta que te digan.','apodo');
+  if(!val('nombre'))return F('Escribe tu nombre completo.','nombre');
+  if(e===null)return F('Escribe tu fecha de nacimiento.','fn');
+  if(val('fn')>hoy||e>110)return F('Revisa tu fecha de nacimiento.','fn');
+  if(digitos(val('wa')).length!==10)return F('Tu WhatsApp debe tener 10 dígitos.','wa');
+  if(e<18&&!val('tnombre'))return F('Escribe el nombre completo de tu tutor.','tnombre');
+  if(e<18&&!val('tpar'))return F('Escribe el parentesco (madre, padre, tutor…).','tpar');
+  if(e<18&&digitos(val('twa')).length!==10)return F('El WhatsApp del tutor debe tener 10 dígitos.','twa');
+  if(e<12&&edadDe(val('tfn'))===null)return F('Escribe la fecha de nacimiento del tutor.','tfn');
+  if(e<12&&(val('tfn')>hoy||edadDe(val('tfn'))>110))return F('Revisa la fecha de nacimiento del tutor.','tfn');
+  if(e<12&&edadDe(val('tfn'))<18)return F('El tutor debe ser mayor de edad.','tfn');
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val('email')))return F('Escribe tu correo: ahí te llega el código para entrar.','email');
+  if($('pass1').value.length<8)return F('Tu contraseña debe tener al menos 8 letras o números.','pass1');
+  if($('pass1').value!==$('pass2').value)return F('Las dos contraseñas no son iguales. Escríbelas otra vez.','pass2');
+  if(!$('c-aviso').checked)return F('Para registrarte debes aceptar el aviso de privacidad y los términos.','c-aviso');
 
-  const btn=$('btn');btn.disabled=true;btn.textContent='Registrando...';
+  const btn=$('btn');btn.disabled=true;btn.textContent='Registrando...';cargando(true,'Registrándote…');
   try{
     const acceso={email:val('email'),contrasena:$('pass1').value};
     const datos={apodo:val('apodo'),nombre_completo:val('nombre'),fecha_nacimiento:val('fn'),whatsapp:val('wa'),
@@ -148,7 +189,7 @@ async function registrar(){
       'Te mandamos un código de 6 números a <b>'+(cod.enviado_a||'tu correo')+'</b>. Escríbelo aquí para entrar.';
     window.scrollTo(0,0);
   }catch(x){err.textContent=x.message;}
-  finally{btn.disabled=false;btn.textContent='Registrarme 💗';}
+  finally{cargando(false);btn.disabled=false;btn.textContent='Registrarme 💗';}
 }
 </script>
 </body>

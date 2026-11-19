@@ -374,7 +374,7 @@
     <h3>💗 Registrar en el Pink Club</h3>
     <div class="row2">
       <div class="field"><label>Apodo</label><input type="text" id="pk-apodo" placeholder="Como le dicen"></div>
-      <div class="field"><label>Fecha de nacimiento</label><input type="date" id="pk-fn" onchange="pinkRevisarEdad()"></div>
+      <div class="field"><label>Fecha de nacimiento</label><input type="date" id="pk-fn" data-nac onchange="pinkRevisarEdad()"></div>
     </div>
     <div class="field"><label>Nombre completo</label><input type="text" id="pk-nombre" placeholder="Nombre y apellidos"></div>
     <div class="row2">
@@ -1443,6 +1443,9 @@ function toast(msg){
 }
 
 init();
+// Fechas de nacimiento: el calendario no deja elegir días después de hoy ni de hace más de 110 años
+(function(){const h=new Date(),d=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0');
+  document.querySelectorAll('input[data-nac]').forEach(x=>{x.max=d;x.min=(h.getFullYear()-110)+'-01-01';});})();
 </script>
 </body>
 </html>

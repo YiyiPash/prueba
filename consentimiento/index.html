@@ -231,7 +231,7 @@ label.check.bad{padding:6px}
     <div class="card">
       <div class="row">
         <label class="f">¿Cómo te gusta que te digan?<input type="text" id="apodo" autocomplete="off"></label>
-        <label class="f">Fecha de nacimiento<input type="date" id="fn"></label>
+        <label class="f">Fecha de nacimiento<input type="date" id="fn" data-nac></label>
       </div>
       <label class="f">Nombre completo<input type="text" id="nombre" autocomplete="off"></label>
       <div class="row">
@@ -246,7 +246,7 @@ label.check.bad{padding:6px}
         <label class="f">Parentesco<input type="text" id="tpar" placeholder="Madre, padre…"></label>
         <label class="f">WhatsApp del tutor<input type="tel" id="twa" inputmode="numeric"></label>
       </div>
-      <label class="f" id="tfnWrap" hidden>Fecha de nacimiento del tutor<input type="date" id="tfn"></label>
+      <label class="f" id="tfnWrap" hidden>Fecha de nacimiento del tutor<input type="date" id="tfn" data-nac></label>
     </div>
   </section>
 
@@ -1096,4 +1096,7 @@ function reiniciar(){
   const listo0=lg&&enLista&&al&&(DEMO||store.get('yp_pink_clave'));
   show(listo0?1:0);
 })();
+// Fechas de nacimiento: el calendario no deja elegir días después de hoy ni de hace más de 110 años
+(function(){const h=new Date(),d=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0');
+  document.querySelectorAll('input[data-nac]').forEach(x=>{x.max=d;x.min=(h.getFullYear()-110)+'-01-01';});})();
 </script>

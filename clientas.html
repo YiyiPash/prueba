@@ -38,6 +38,11 @@ label{display:grid;gap:4px;font-size:13px;font-weight:600}
 .ok{background:var(--ok-bg);color:var(--ok);border-radius:10px;padding:9px 12px;font-size:13px;font-weight:600;margin:0}
 .lista{display:grid;gap:8px}
 .ev{font-size:13px;border-top:1px solid var(--line);padding-top:6px}
+/* Pantalla de carga: tapa el panel mientras abre o guarda */
+.giro{width:44px;height:44px;margin:0 auto 14px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--accent);animation:giro .8s linear infinite}
+@keyframes giro{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.giro{animation-duration:2.4s}}
+#cargador{position:fixed;inset:0;z-index:50;background:rgba(255,225,238,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:var(--accent);text-align:center;padding:24px}
 </style>
 </head>
 <body>
@@ -68,7 +73,7 @@ label{display:grid;gap:4px;font-size:13px;font-weight:600}
         <label for="tutor_parentesco">Parentesco<input id="tutor_parentesco" autocomplete="off"></label>
         <label for="tutor_whatsapp">WhatsApp del tutor<input id="tutor_whatsapp" inputmode="tel" autocomplete="off"></label>
       </div>
-      <label for="fn">Fecha de nacimiento<input type="date" id="fn"></label>
+      <label for="fn">Fecha de nacimiento<input type="date" id="fn" data-nac></label>
       <label for="claveD" id="lClave" hidden>Clave de Luis y Yoltic (para cambiar la fecha)<input type="password" id="claveD" autocomplete="off"></label>
       <label for="por">¿Quién hace el cambio?<input id="por" autocomplete="off"></label>
       <p class="mu">Aquí no se cambia la salud ni lo que ya firmó la clienta.</p>
@@ -92,6 +97,7 @@ label{display:grid;gap:4px;font-size:13px;font-weight:600}
     <div class="card" id="historial" hidden></div>
   </section>
 </div>
+<div id="cargador" role="status" aria-live="polite" hidden><div class="giro" aria-hidden="true"></div><p id="cargador-txt">Cargando…</p></div>
 <script>
 const AS_URL='https://script.google.com/macros/s/AKfycbwOhVk8lowZwedDv-J0wOCparRSL1MZu9ybJXJ6oru5Br87eLRgtO6Ny10sv947ciuv/exec';
 const $=id=>document.getElementById(id);
@@ -102,7 +108,12 @@ const CAMPOS=['apodo','nombre','whatsapp','email','tutor_nombre','tutor_parentes
 const NOMBRES={Apodo:'apodo',Nombre_Completo:'nombre',WhatsApp:'WhatsApp',Email:'correo',Tutor_Nombre:'nombre del tutor',Tutor_Parentesco:'parentesco',Tutor_WhatsApp:'WhatsApp del tutor',Fecha_Nacimiento:'fecha de nacimiento'};
 const TIPOS={Titular:'Mayor de edad',Menor_12_17:'Menor de edad',Dependiente_menor_12:'Menor de 12 años'};
 let LISTA=null,listaProm=null,actual=null;
-async function api(action,data){
+// texto: si viene, se muestra la pantalla de carga mientras responde
+async function api(action,data,texto){
+  if(texto){$('cargador-txt').textContent=texto;$('cargador').hidden=false;}
+  try{return await api0(action,data);}finally{if(texto)$('cargador').hidden=true;}
+}
+async function api0(action,data){
   const res=await fetch(AS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(Object.assign({action,clave:leer('yp_pink_clave')},data||{})),redirect:'follow'});
   const j=await res.json();
   if(!j.ok)throw new Error(j.error||'Error del servidor');
@@ -159,7 +170,7 @@ $('fPapel').onsubmit=async e=>{
   if(!confirm('¿Agregar la nota '+$('pFolio').value.trim()+' por $'+fmt($('pMonto').value)+'? Ya no se puede volver a usar.'))return;
   $('bPapel').disabled=true;
   try{
-    const r=await api('consent_nota_papel',{id:actual.id,folio:$('pFolio').value,fecha:$('pFecha').value,monto:$('pMonto').value,por:$('por').value.trim()});
+    const r=await api('consent_nota_papel',{id:actual.id,folio:$('pFolio').value,fecha:$('pFecha').value,monto:$('pMonto').value,por:$('por').value.trim()},'Agregando nota…');
     actual.pink=r.pink;pintarPink(r.pink);
     ['pFolio','pFecha','pMonto'].forEach(k=>{$(k).value='';});
     $('aviso').textContent='Nota de papel agregada.'+(r.founder?' Con eso juntó $999: ya es Founder.':'');$('aviso').hidden=false;scrollTo(0,0);
@@ -169,8 +180,7 @@ $('fPapel').onsubmit=async e=>{
 $('q').oninput=buscar;
 $('res').onclick=async e=>{
   const b=e.target.closest('[data-id]');if(!b)return;
-  $('estado').textContent='Abriendo…';
-  try{pintar(await api('consent_clienta_detalle',{id:b.dataset.id}));$('estado').textContent='';}
+  try{pintar(await api('consent_clienta_detalle',{id:b.dataset.id},'Abriendo clienta…'));$('estado').textContent='';}
   catch(x){$('estado').textContent='';error('eBuscar',x.message);}
 };
 $('aBuscar').onclick=()=>{$('vClienta').hidden=true;$('vBuscar').hidden=false;$('aBuscar').hidden=true;$('aInicio').hidden=false;actual=null;};
@@ -184,12 +194,15 @@ $('f').onsubmit=async e=>{
   CAMPOS.forEach(k=>{data[k]=$(k).value;});
   $('bGuardar').disabled=true;
   try{
-    const r=await api('consent_clienta_guardar',data);
+    const r=await api('consent_clienta_guardar',data,'Guardando cambios…');
     LISTA=null;listaProm=null;
     pintar(r.clienta,r.cambios?'Cambios guardados.':'No había nada que cambiar.');
   }catch(x){error('eForm',x.message);$('claveD').value='';}
   $('bGuardar').disabled=false;
 };
+// Fecha de nacimiento: el calendario no deja elegir días después de hoy ni de hace más de 110 años
+(function(){const h=new Date(),d=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0');
+  document.querySelectorAll('input[data-nac]').forEach(x=>{x.max=d;x.min=(h.getFullYear()-110)+'-01-01';});$('pFecha').max=d;})();
 if(leer('yp_pink_clave'))cargarLista().catch(()=>{});   // la lista ya está lista cuando empiezan a escribir
 </script>
 </body>

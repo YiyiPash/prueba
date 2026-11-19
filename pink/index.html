@@ -113,6 +113,13 @@ input:focus-visible{border-color:var(--fr-texto);outline:3px solid var(--pastel)
 .recordar{display:flex;gap:10px;align-items:center;min-height:44px;font-size:13.5px;font-weight:500;margin:0 0 10px}
 .recordar input{width:20px;height:20px;min-height:0;margin:0;padding:0;accent-color:var(--fr-fondo)}
 .cargando{padding-top:120px;text-align:center;color:var(--tinta2);font-family:var(--r);letter-spacing:.04em}
+/* Pantalla de carga: tapa la app mientras se guarda o se consulta, para que no se use a medias */
+.giro{width:44px;height:44px;margin:0 auto 14px;border-radius:50%;border:4px solid var(--pastel);border-top-color:var(--fr-fondo);animation:giro .8s linear infinite}
+@keyframes giro{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.giro{animation-duration:2.4s}}
+#cargador{position:fixed;inset:0;z-index:50;background:rgba(252,217,232,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:var(--r);font-weight:500;font-size:17px;letter-spacing:.04em;color:var(--fr-texto);text-align:center;padding:24px}
+.rel+.rel{margin-top:30px}
 
 /* Foto de perfil (opcional) */
 .avatar{border-radius:50%;object-fit:cover;background:var(--pastel);display:block}
@@ -136,7 +143,8 @@ nav.tabs [role="tab"][aria-selected="true"]{background:var(--fr-fondo);color:#ff
 <body>
 <div class="app">
 
-<p id="v-cargando" class="cargando" role="status">Abriendo tu Pink Club…</p>
+<div id="v-cargando" class="cargando" role="status"><div class="giro" aria-hidden="true"></div>Abriendo tu Pink Club…</div>
+<div id="cargador" role="status" aria-live="polite" hidden><div class="giro" aria-hidden="true"></div><p id="cargador-txt">Cargando…</p></div>
 
 <!-- ═════ ENTRADA ═════ -->
 <main id="v-entrada" class="entrada" hidden>
@@ -239,7 +247,7 @@ nav.tabs [role="tab"][aria-selected="true"]{background:var(--fr-fondo);color:#ff
   </dl>
   <h2 class="sub">Tus compras</h2>
   <ul class="card lista" id="movs"></ul>
-  <p class="nota" id="nota-lanz" hidden>Tus compras empiezan a sumar puntos el 13 de noviembre.</p>
+  <p class="nota" id="nota-lanz" hidden>Tus compras empiezan a sumar puntos el 20 de noviembre.</p>
 </section>
 
 <section role="tabpanel" id="panel-expediente" aria-labelledby="tab-expediente" hidden>
@@ -304,7 +312,7 @@ nav.tabs [role="tab"][aria-selected="true"]{background:var(--fr-fondo);color:#ff
 
 <script>
 const AS_URL='https://script.google.com/macros/s/AKfycbwOhVk8lowZwedDv-J0wOCparRSL1MZu9ybJXJ6oru5Br87eLRgtO6Ny10sv947ciuv/exec';
-const LANZAMIENTO='2026-11-13';
+const LANZAMIENTO='2026-11-20';
 const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const MES3=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const $=id=>document.getElementById(id);
@@ -320,9 +328,19 @@ const ses={get:()=>{try{return localStorage.getItem('yppc_sesion')||sessionStora
   del:()=>{try{localStorage.removeItem('yppc_sesion');sessionStorage.removeItem('yppc_sesion');}catch(_){}}};
 let D=null,S=null,U='',CORREO='',RECORDAR=true,TRAS_CONTRASENA=null;
 
-async function api(o){
-  const r=await fetch(AS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(o),redirect:'follow'});
-  const j=await r.json();
+// texto: lo que dice la pantalla de carga mientras responde (cada llamada la muestra)
+let CARGAS=0;
+function cargando(on,texto){
+  CARGAS=Math.max(0,CARGAS+(on?1:-1));
+  if(on)$('cargador-txt').textContent=texto||'Cargando…';
+  $('cargador').hidden=CARGAS===0;
+}
+async function api(o,texto){
+  cargando(true,texto);
+  let j;
+  try{const r=await fetch(AS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(o),redirect:'follow'});j=await r.json();}
+  catch(_){throw new Error('No se pudo conectar. Revisa tu internet e intenta de nuevo.');}
+  finally{cargando(false);}
   if(!j.ok){
     // Sesión vencida o cerrada desde otro dispositivo: de vuelta a la entrada
     if(S&&/sesión terminó/.test(j.error||'')){ses.del();S=null;D=null;vista('v-entrada');$('e-entrar').textContent=j.error;}
@@ -368,7 +386,7 @@ $('f-entrar').onsubmit=async e=>{
   if(!usuarioOk(U,'e-entrar'))return;
   if(!$('pass').value){$('e-entrar').textContent='Escribe tu contraseña, o toca "Enviar código por correo para ingresar".';$('pass').focus();return;}
   await ocupado('b-entrar','Entrando…',async()=>{
-    try{const r=await api({action:'pink_login',usuario:U,contrasena:$('pass').value,recordar:RECORDAR});$('pass').value='';entro(r);}
+    try{const r=await api({action:'pink_login',usuario:U,contrasena:$('pass').value,recordar:RECORDAR},'Entrando…');$('pass').value='';entro(r);}
     catch(x){$('e-entrar').textContent=x.message;}
   });
 };
@@ -381,7 +399,7 @@ $('b-codigo').onclick=async()=>{
   U=$('usuario').value.trim();RECORDAR=$('recordar').checked;CORREO='';
   if(!usuarioOk(U,'e-entrar'))return;
   await ocupado('b-codigo','Enviando…',async()=>{
-    try{const r=await api({action:'pink_codigo',usuario:U});
+    try{const r=await api({action:'pink_codigo',usuario:U},'Enviando tu código…');
       if(r.pedir_correo){vista('v-correo');enfocar('t-correo');return;}
       verCodigo(r);}
     catch(x){$('e-entrar').textContent=x.message;}
@@ -392,7 +410,7 @@ $('f-correo').onsubmit=async e=>{
   const c=$('email1').value.trim();
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c)){$('e-correo').textContent='Revisa tu correo.';$('email1').focus();return;}
   await ocupado('b-correo','Enviando…',async()=>{
-    try{CORREO=c;verCodigo(await api({action:'pink_codigo',usuario:U,email:c}));}
+    try{CORREO=c;verCodigo(await api({action:'pink_codigo',usuario:U,email:c},'Enviando tu código…'));}
     catch(x){$('e-correo').textContent=x.message;}
   });
 };
@@ -405,13 +423,13 @@ $('f-codigo').onsubmit=async e=>{
   const c=$('codigo').value.replace(/\D/g,'');
   if(c.length!==6){$('e-codigo').textContent='El código tiene 6 números.';$('codigo').focus();return;}
   await ocupado('b-codigo2','Entrando…',async()=>{
-    try{entro(await api({action:'pink_codigo_entrar',usuario:U,codigo:c,recordar:RECORDAR}));}
+    try{entro(await api({action:'pink_codigo_entrar',usuario:U,codigo:c,recordar:RECORDAR},'Entrando…'));}
     catch(x){$('e-codigo').textContent=x.message;}
   });
 };
 $('b-otro').onclick=async()=>{
   $('e-codigo').textContent='';
-  try{verCodigo(await api(Object.assign({action:'pink_codigo',usuario:U},CORREO?{email:CORREO}:{})));$('e-codigo').textContent='Listo, te mandamos otro.';}
+  try{verCodigo(await api(Object.assign({action:'pink_codigo',usuario:U},CORREO?{email:CORREO}:{}),'Enviando otro código…'));$('e-codigo').textContent='Listo, te mandamos otro.';}
   catch(x){$('e-codigo').textContent=x.message;}
 };
 function volver(){vista('v-entrada');enfocar('usuario');}
@@ -419,7 +437,7 @@ $('f-aviso').onsubmit=async e=>{
   e.preventDefault();$('e-aviso').textContent='';
   if(!$('ok-aviso').checked){$('e-aviso').textContent='Para entrar debes marcar la casilla.';return;}
   await ocupado('b-aviso','Entrando…',async()=>{
-    try{mostrar(await api({action:'pink_app',sesion:S,acepto_aviso:true}));}
+    try{mostrar(await api({action:'pink_app',sesion:S,acepto_aviso:true},'Abriendo tu Pink Club…'));}
     catch(x){$('e-aviso').textContent=x.message;}
   });
 };
@@ -438,7 +456,7 @@ $('f-contrasena').onsubmit=async e=>{
   if(a.length<8){$('e-contrasena').textContent='Usa al menos 8 letras o números.';$('pass1').focus();return;}
   if(a!==b){$('e-contrasena').textContent='Las dos no son iguales. Escríbelas otra vez.';$('pass2').focus();return;}
   await ocupado('b-contrasena','Guardando…',async()=>{
-    try{await api({action:'pink_contrasena',sesion:S,nueva:a});$('pass1').value=$('pass2').value='';
+    try{await api({action:'pink_contrasena',sesion:S,nueva:a},'Guardando tu contraseña…');$('pass1').value=$('pass2').value='';
       const f=TRAS_CONTRASENA;TRAS_CONTRASENA=null;f();
       if(D&&D.persona){D.persona.tiene_contrasena=true;pintarSeguridad();}}
     catch(x){$('e-contrasena').textContent=x.message;}
@@ -520,23 +538,24 @@ function pintarExp(){
       '<p class="nota"><a class="link" target="_blank" rel="noopener" href="'+esc(waLink('Hola, soy '+quien()+' y tengo una duda sobre mi expediente.'))+'">¿Dudas? Escríbenos</a></p>';
     return;
   }
-  let h=expHTML(E,'Mis');
+  const R=D.relacionadas||[];
+  const tatu=E.tatuajes.length>0||R.some(x=>x.expediente&&x.expediente.tatuajes.length);
+  let h=expHTML(E,'Mis','',R.length>0,tatu);
   if(E.visitas.length)h+='<h2 class="sub">Mis visitas</h2><div class="card"><ol class="tl" reversed>'+E.visitas.map(v=>
     '<li><div class="val">'+esc(fecha(v.fecha))+' · '+esc(v.tipo)+'</div>'+((v.lugar||v.atendio)?'<div class="det">'+esc([v.lugar,v.atendio?'con '+v.atendio:''].filter(Boolean).join(' · '))+'</div>':'')+'</li>').join('')+'</ol></div>';
   // Related Pinkies: las menores ligadas a ella (sus compras y cuidados)
-  const R=D.relacionadas||[];
   if(R.length){
     h+='<h2 class="titulo" style="margin-top:34px">Related Pinkies</h2>';
     R.forEach(x=>{
-      h+='<article class="card" style="padding:14px 20px"><div class="val" style="font-size:18px">'+esc(x.apodo)+'</div><div class="det">'+esc(x.nombre)+(x.edad!==''?' · '+esc(x.edad)+' años':'')+' · ID '+esc(x.id)+'</div>'+
+      h+='<section class="rel" aria-label="'+esc(x.apodo)+'"><article class="card" style="padding:14px 20px"><div class="val" style="font-size:18px">'+esc(x.apodo)+'</div><div class="det">'+esc(x.nombre)+(x.edad!==''?' · '+esc(x.edad)+' años':'')+' · ID '+esc(x.id)+'</div>'+
         '<div class="det" style="margin-top:4px">'+(x.cuenta?esc(fmt(x.cuenta.saldo))+' puntos en su cuenta':'Sus compras suman en tu cuenta')+'</div></article>';
-      h+=expHTML(x.expediente,'Sus',x.apodo);
+      h+=expHTML(x.expediente,'Sus',x.apodo)+'</section>';
     });
   }
   $('exp').innerHTML=h;
 }
 // Próxima revisión, perforaciones, tatuajes y manual. pre: 'Mis' (ella) o 'Sus' (una Related Pinky)
-function expHTML(E,pre,apodo){
+function expHTML(E,pre,apodo,conRel,tatu){
   const mia=pre==='Mis';let h='';
   if(E.proxima){const [y,mm,dd]=E.proxima.fecha.split('-').map(Number);
     h+='<article class="prox" aria-label="Próxima cita"><p class="dia" aria-hidden="true"><b>'+dd+'</b><span>'+MES3[mm-1]+'</span></p>'+
@@ -546,15 +565,16 @@ function expHTML(E,pre,apodo){
   if(mia||E.perforaciones.length)h+='<h2 class="sub">'+pre+' perforaciones</h2>';
   h+=E.perforaciones.length?'<ul class="card lista">'+E.perforaciones.map(item).join('')+'</ul>':(mia?'<p class="tranqui det">Aquí verás tus perforaciones.</p>':'');
   if(E.tatuajes.length)h+='<h2 class="sub">'+pre+' tatuajes</h2><ul class="card lista">'+E.tatuajes.map(item).join('')+'</ul>';
-  if(mia||E.perforaciones.length){
-    if(E.manual)h+='<a class="btn" target="_blank" rel="noopener" href="'+esc(E.manual)+'">'+(mia?'Mi manual de cuidados':'Manual de cuidados de '+esc(apodo))+'</a>';
-    if(E.tatuajes.length&&E.manual_tatuaje)h+='<a class="btn sec" style="margin-top:10px" target="_blank" rel="noopener" href="'+esc(E.manual_tatuaje)+'">Cuidados del tatuaje</a>';
+  // El manual va una sola vez (el de ella); sirve también para sus Related Pinkies
+  if(mia){
+    if(E.manual)h+='<a class="btn" target="_blank" rel="noopener" href="'+esc(E.manual)+'">'+(conRel?'Manual de cuidados':'Mi manual de cuidados')+'</a>';
+    if(tatu&&E.manual_tatuaje)h+='<a class="btn sec" style="margin-top:10px" target="_blank" rel="noopener" href="'+esc(E.manual_tatuaje)+'">Cuidados del tatuaje</a>';
   }
   if(mia)h+='<p class="nota"><a class="link" target="_blank" rel="noopener" href="'+esc(waLink('Hola, soy '+quien()+' y tengo una duda sobre mis cuidados.'))+'">¿Dudas? Escríbenos</a></p>';
   return h;
 }
 
-// ── Foto de perfil (opcional, solo con link personal y 18+) ──
+// ── Foto de perfil (opcional, solo con sesión y 18+) ──
 function pintarFoto(){
   const p=D.persona,f=p.foto||'';
   $('foto-hdr').hidden=!f;if(f){$('foto-hdr').src=f;}
@@ -604,19 +624,30 @@ function achicar(archivo){
   });
 }
 
-// ── Fecha de nacimiento (solo con link personal) ───────
+// ── Fecha de nacimiento (si no la tenía; solo se guarda una vez) ───────
 function pedirFecha(){
   ir('datos');
+  limitarFecha($('fn2'));
   $('f-fecha').hidden=false;$('cumple2').hidden=true;$('fn2').focus();
 }
 $('b-fecha').onclick=async()=>{
   const fn=$('fn2').value,b=$('b-fecha');$('e-fecha').textContent='';
   if(!fn){$('e-fecha').textContent='Escribe tu fecha de nacimiento.';return;}
-  b.disabled=true;b.textContent='Guardando…';
-  try{const r=await api({action:'pink_app_fecha',sesion:S,fecha_nacimiento:fn});$('f-fecha').hidden=true;$('cumple2').hidden=false;mostrar(await api({action:'pink_app',sesion:S}));ir('datos');}
+  if(fn>$('fn2').max||fn<$('fn2').min){$('e-fecha').textContent='Revisa tu fecha de nacimiento.';return;}
+  const [fy,fm,fd]=fn.split('-').map(Number);
+  if(!confirm('¿Naciste el '+fd+' de '+MESES[fm-1]+' de '+fy+'? Revísala bien: solo se puede guardar una vez.'))return;
+  b.disabled=true;cargando(true,'Guardando tu fecha…');
+  try{await api({action:'pink_app_fecha',sesion:S,fecha_nacimiento:fn},'Guardando tu fecha…');
+    const r=await api({action:'pink_app',sesion:S},'Guardando tu fecha…');
+    $('f-fecha').hidden=true;$('cumple2').hidden=false;mostrar(r);ir('datos');}
   catch(x){$('e-fecha').textContent=x.message;}
-  finally{b.disabled=false;b.textContent='Guardar';}
+  finally{cargando(false);b.disabled=false;}
 };
+// Fechas de nacimiento: el calendario no deja elegir días después de hoy ni de hace más de 110 años
+function limitarFecha(x){
+  const h=new Date(),d=t=>t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+  x.max=d(h);x.min=(h.getFullYear()-110)+'-01-01';
+}
 
 // ── Pestañas (patrón ARIA). Al cambiar, el foco va al título de la sección. ──
 const tabs=[...document.querySelectorAll('[role="tab"]')];
