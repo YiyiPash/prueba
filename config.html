@@ -137,7 +137,7 @@ label{display:grid;gap:4px;font-size:13px;font-weight:600}
       <label for="nUsuario">Usuario o apodo <span class="mu" style="font-weight:400">con esto entra (ej. kat)</span><input id="nUsuario" autocomplete="off" autocapitalize="none" placeholder="Ej. kat"></label>
       <label for="nCompleto">Nombre completo <span class="mu" style="font-weight:400">opcional</span><input id="nCompleto" autocomplete="off"></label>
       <label for="nRol">Tipo de acceso<select id="nRol"></select></label>
-      <label for="nColab">Colaboradora (para "Elaboró" y pagos) <span class="mu" style="font-weight:400">opcional</span><select id="nColab"></select></label>
+      <label for="nColab">¿Quién es en las notas? <span class="mu" style="font-weight:400">opcional</span><select id="nColab"></select><small class="mu" style="font-weight:400">Su nombre en la lista de artistas (la misma de "Elaboró" y de los pagos). Al entrar, la nota y el consentimiento ya salen con su nombre. El iPad va en "Ninguna".</small></label>
       <p class="mu">La primera vez que entre, crea su PIN contigo o con Yol presentes.</p>
       <button class="btn" type="submit">Agregar</button>
       <p class="err" id="eNuevo" hidden></p>
@@ -196,42 +196,65 @@ function pintar(c){C=c;pintarServicios();pintarLugares();pintarMensajes();}
 
 // ── Zonas: cada zona con sus lados; se guarda solo ──
 const ladosDe=z=>z.lados&&z.lados.length?z.lados:C.lados;
-function pintarServicios(){
-  $('servicios').innerHTML=C.servicios.map(s=>`<div class="card" data-sku="${esc(s.sku)}">
+const tarjeta=s=>`<div class="card" data-sku="${esc(s.sku)}">
     <h2>${esc(s.nombre)} <span class="mu" style="font-weight:500">${esc(s.sku)}</span></h2>
-    <div>${s.zonas.map((z,i)=>`<div class="zona"><div class="nom"><span>${esc(z.z)}</span><button class="mini" type="button" data-quitar="${i}" aria-label="Quitar ${esc(z.z)}">Quitar</button></div>
+    <div>${s.zonas.map((z,i)=>`<div class="zona" data-nombre="${esc(z.z)}"><div class="nom"><span>${esc(z.z)}</span><button class="mini" type="button" data-quitar="${i}" aria-label="Quitar ${esc(z.z)}">Quitar</button></div>
       <div class="lados">${C.lados.map(l=>`<label class="lado"><input type="checkbox" data-z="${i}" value="${esc(l)}"${ladosDe(z).includes(l)?' checked':''}>${esc(l)}</label>`).join('')}</div></div>`).join('')||'<p class="mu">Sin zonas</p>'}</div>
     <div class="fila"><input placeholder="Zona nueva" autocomplete="off" data-nueva aria-label="Zona nueva para ${esc(s.nombre)}"><button class="btn sec" type="button" data-agregar>Agregar</button></div>
-    <p class="estado" data-estado aria-live="polite"></p></div>`).join('');
+    <p class="estado" data-estado aria-live="polite"></p></div>`;
+function pintarServicios(){$('servicios').innerHTML=C.servicios.map(tarjeta).join('');}
+// Vuelve a pintar solo una tarjeta (las demás conservan lo que se está palomeando)
+function pintarServicio(sku){
+  const s=C.servicios.find(x=>x.sku===sku),el=$('servicios').querySelector(`[data-sku="${CSS.escape(sku)}"]`);
+  if(s&&el)el.outerHTML=tarjeta(s);
 }
 function estadoZona(sku,msg,mal){const e=$('servicios').querySelector(`[data-sku="${CSS.escape(sku)}"] [data-estado]`);if(e){e.textContent=msg;e.classList.toggle('mal',!!mal);}}
-async function guardarZonas(sku,zonas,listo){
-  const s=C.servicios.find(x=>x.sku===sku);
-  estadoZona(sku,'Guardando…');
-  try{const c=await api('consent_cfg_zonas',{sku,zonas,antes:s.texto},'',true);pintar(c);estadoZona(sku,listo||'Guardado ✓');}
-  catch(x){pintarServicios();estadoZona(sku,x.message,true);}
+// Fila de guardado: uno a la vez, y varios clics seguidos en el mismo servicio se juntan en uno.
+// Antes cada clic mandaba lo que había al abrir y el segundo chocaba con el primero ("Alguien más cambió…").
+const cola=[];let guardando=false;
+const pendiente=sku=>cola.some(t=>t.sku===sku);
+function encolar(sku,armar,listo){
+  if(armar==='palomitas'&&cola.some(t=>t.sku===sku&&t.armar==='palomitas'))return;   // ya va a leer las palomitas al mandarse
+  cola.push({sku,armar,listo});estadoZona(sku,'Guardando…');siguiente();
+}
+// Lo que se ve en la tarjeta: cada zona con sus palomitas
+const zonasDeTarjeta=sku=>[...$('servicios').querySelectorAll(`[data-sku="${CSS.escape(sku)}"] .zona`)].map(el=>({z:el.dataset.nombre,lados:[...el.querySelectorAll('input:checked')].map(x=>x.value)}));
+async function siguiente(){
+  if(guardando||!cola.length)return;
+  guardando=true;const t=cola.shift();
+  try{
+    const s=C.servicios.find(x=>x.sku===t.sku),zonas=t.armar==='palomitas'?zonasDeTarjeta(t.sku):t.armar(s);
+    const c=await api('consent_cfg_zonas',{sku:t.sku,zonas,antes:s.texto},'',true);
+    C.servicios=c.servicios;C.lados=c.lados;
+    if(!pendiente(t.sku)){pintarServicio(t.sku);estadoZona(t.sku,t.listo||'Guardado ✓');}
+  }catch(x){
+    for(let i=cola.length-1;i>=0;i--)if(cola[i].sku===t.sku)cola.splice(i,1);
+    try{const c=await api('consent_cfg_leer',{},'',true);C.servicios=c.servicios;C.lados=c.lados;}catch(e){}
+    pintarServicio(t.sku);estadoZona(t.sku,x.message+' (ya te enseño cómo quedó guardado)',true);
+  }finally{guardando=false;siguiente();}
 }
 const copiaZonas=s=>s.zonas.map(z=>({z:z.z,lados:ladosDe(z).slice()}));
+// Quitar o agregar cambia la lista: la tarjeta se congela hasta que se guarda
+const congelar=card=>{card.inert=true;card.style.opacity='.6';};
 $('servicios').addEventListener('change',e=>{
   const cb=e.target.closest('[data-z]');if(!cb)return;
-  const card=cb.closest('[data-sku]'),sku=card.dataset.sku,s=C.servicios.find(x=>x.sku===sku),i=+cb.dataset.z;
-  const marcados=[...card.querySelectorAll(`[data-z="${i}"]:checked`)].map(x=>x.value);
-  if(!marcados.length){cb.checked=true;return estadoZona(sku,'Deja al menos un lado en '+s.zonas[i].z+'.',true);}
-  const zs=copiaZonas(s);zs[i].lados=marcados;guardarZonas(sku,zs);
+  const card=cb.closest('[data-sku]'),sku=card.dataset.sku,zona=cb.closest('.zona');
+  if(!zona.querySelector('input:checked')){cb.checked=true;return estadoZona(sku,'Deja al menos un lado en '+zona.dataset.nombre+'.',true);}
+  encolar(sku,'palomitas');
 });
 $('servicios').onclick=e=>{
   const card=e.target.closest('[data-sku]'),b=e.target.closest('button');if(!card||!b)return;
   const sku=card.dataset.sku,s=C.servicios.find(x=>x.sku===sku);
   if(b.dataset.quitar!==undefined){
-    const i=+b.dataset.quitar;
-    if(!confirm('¿Quitar la zona '+s.zonas[i].z+' de '+s.nombre+'? Ya no saldrá en el consentimiento.'))return;
-    const zs=copiaZonas(s);zs.splice(i,1);return guardarZonas(sku,zs,'Zona quitada ✓');
+    const nom=b.closest('.zona').dataset.nombre;
+    if(!confirm('¿Quitar la zona '+nom+' de '+s.nombre+'? Ya no saldrá en el consentimiento.'))return;
+    congelar(card);return encolar(sku,s2=>copiaZonas(s2).filter(z=>z.z!==nom),'Zona quitada ✓');
   }
   if(b.hasAttribute('data-agregar')){
     const inp=card.querySelector('[data-nueva]'),z=inp.value.replace(/[(),/]/g,' ').replace(/\s+/g,' ').trim();
     if(!z)return inp.focus();
     if(s.zonas.some(x=>x.z.toLowerCase()===z.toLowerCase()))return estadoZona(sku,'Esa zona ya está.',true);
-    const zs=copiaZonas(s);zs.push({z,lados:C.lados.slice()});guardarZonas(sku,zs,z+' agregada ✓ — palomea sus lados');
+    congelar(card);encolar(sku,s2=>copiaZonas(s2).concat({z,lados:C.lados.slice()}),z+' agregada ✓ — palomea sus lados');
   }
 };
 $('servicios').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('[data-nueva]')){e.preventDefault();e.target.closest('[data-sku]').querySelector('[data-agregar]').click();}});
@@ -301,7 +324,7 @@ function pintarLista(){
       <label>Usuario o apodo<input name="usuario" value="${esc(p.usuario)}" autocomplete="off" autocapitalize="none"></label>
       <label>Nombre completo <span class="mu" style="font-weight:400">opcional</span><input name="completo" value="${esc(p.nombre_completo)}" autocomplete="off"></label>
       <label>Tipo de acceso<select name="rol">${opcionesRol(p.rol)}</select></label>
-      <label>Colaboradora<select name="colab">${opcionesColab(p.id_colaborador)}</select></label>
+      <label>¿Quién es en las notas? <span class="mu" style="font-weight:400">su nombre en "Elaboró"</span><select name="colab">${opcionesColab(p.id_colaborador)}</select></label>
       <button class="btn" type="submit">Guardar</button><button class="btn sec" type="button" data-cancelar>Cancelar</button>
       <p class="err" data-err hidden></p></form>`;
     return `<div class="card${p.activo?'':' off'}" data-id="${esc(p.id)}">
