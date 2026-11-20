@@ -363,7 +363,7 @@ $('btnAnotar').onclick=()=>{
   const activas=items.filter(x=>x.estado==='Curando');
   $('vPerfos').innerHTML=items.length?items.map(x=>`<label><input type="checkbox" value="${esc(x.id)}"${activas.includes(x)?' checked':''}> ${esc(zonaTxt(x))} <small style="color:var(--mu)">(${esc(fmtF(x.fecha))})</small></label>`).join('')
     :'<span class="estado">Sin perforaciones ni tatuajes registrados.</span>';
-  ['vObs','vAccion','vDias'].forEach(i=>$(i).value='');$('vFotos').value='';$('vErr').textContent='';
+  ['vObs','vAccion','vDias'].forEach(i=>$(i).value='');YP.fotosLimpiar($('vFotos'));$('vErr').textContent='';
   vEstado='';$('vEstado').querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed',c.dataset.e===''));
   AVV=window.YP&&YP.avance?YP.avance($('formVisita'),E.id):null;   // avance guardado de la visita
   if(AVV&&AVV.restaurar())$('vErr').textContent='Seguiste donde te quedaste: todavía no está guardada.';
@@ -385,7 +385,7 @@ $('vGuardar').onclick=async()=>{
     const r=await api('consent_visita',{id_clienta:E.id,tipo:$('vTipo').value,obs:$('vObs').value.trim(),estado:vEstado,accion,dias,
       perfos:[...$('vPerfos').querySelectorAll('input:checked')].map(i=>i.value),
       atiende:{id:store.get('ypp_elaboro_id')||'',alias:store.get('ypp_elaboro_alias')||''}});
-    const fotos=[...$('vFotos').files];
+    const fotos=YP.fotos($('vFotos'));
     for(let i=0;i<fotos.length;i++){b.textContent=`Subiendo foto ${i+1} de ${fotos.length}…`;
       await api('consent_foto',{id_visita:r.id_visita,foto:await reducir(fotos[i])});}
     if(AVV)AVV.borrar();
@@ -441,7 +441,7 @@ function abrirForm(titulo,campos,guardar){
 }
 function leerCampo(c){const el=$('ef_'+c.k);if(!el)return '';
   if(c.t==='checks')return [...el.querySelectorAll('input:checked')].map(i=>i.value);
-  if(c.t==='file')return [...el.files];
+  if(c.t==='file')return YP.fotos(el);
   return el.value.trim();}
 const etiqueta=(c,v)=>{const o=c.ops.find(o=>(Array.isArray(o)?o[0]:o)===v);return (Array.isArray(o)?o[1]:o)||v||'(vacío)';};
 const mostrar=(c,v)=>c.t==='sel'?etiqueta(c,v):c.t==='date'?(v?fmtF(v):'(vacío)'):c.t==='checks'?(v.length?v.map(i=>(c.ops.find(o=>o.id===i)||{t:i}).t).join(', '):'(ninguna)'):(v||'(vacío)');

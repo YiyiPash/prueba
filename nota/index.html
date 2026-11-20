@@ -1360,7 +1360,7 @@ async function guardarVisitaNota(){
     const r=await pinkApi('consent_visita',{id_clienta:VN.id,tipo:document.getElementById('vnTipo').value,obs,estado:VN.estado,accion,dias,
       perfos:[...document.querySelectorAll('#vn-form .vn-checks input:checked')].map(i=>i.value),
       atiende:{id:tab.elaboro.id||'',alias:tab.elaboro.alias||''}});
-    const fotos=[...document.getElementById('vnFotos').files];
+    const fotos=YP.fotos(document.getElementById('vnFotos'));
     for(let i=0;i<fotos.length;i++){b.textContent=`Subiendo foto ${i+1} de ${fotos.length}…`;
       await pinkApi('consent_foto',{id_visita:r.id_visita,foto:await reducirFoto_VN(fotos[i])});}
     if(VN.av)VN.av.borrar();
@@ -1406,7 +1406,7 @@ function pinkEstadoCls(e){return ['Activa','Registrada','Baja'].includes(e)?e:'S
 async function pinkBuscar(){
   const inp=document.getElementById('pk-search'),box=document.getElementById('pk-results');
   const q=inp.value.trim();
-  if(q.length<3){box.classList.remove('open');return;}
+  if(q.length<2){box.classList.remove('open');return;}
   if(!pinkClave()&&!(await pinkPedirClave(false)))return;
   box.innerHTML='<div class="no-r">Buscando...</div>';box.classList.add('open');
   try{

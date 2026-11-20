@@ -86,6 +86,13 @@
     'font:600 13px Montserrat,system-ui,sans-serif;color:#d6347f;background:#fff;border:1.5px solid #f8c4dc;border-radius:999px;padding:6px 13px;text-decoration:none;box-shadow:0 2px 0 #f8c4dc;margin:4px 0}',
     '.yp-casita:focus-visible{outline:3px solid #ff74af;outline-offset:2px}',
     '[data-ver].ys-oculto{display:none!important}',
+    '.yp-fotos{display:grid;gap:8px}.yp-fotos-bt{display:flex;gap:8px;flex-wrap:wrap}',
+    '.yp-fotos-bt button{flex:1 1 140px;font:600 14px Montserrat,system-ui,sans-serif;color:#d6347f;background:#fff;border:1.5px solid #f8c4dc;border-radius:12px;padding:11px 10px;cursor:pointer}',
+    '.yp-fotos-bt button:focus-visible{outline:3px solid #ff74af;outline-offset:2px}',
+    '.yp-fotos-l{display:flex;gap:8px;flex-wrap:wrap}.yp-fotos-l:empty{display:none}',
+    '.yp-foto{position:relative;width:64px;height:64px;border-radius:10px;overflow:hidden;border:1.5px solid #f8c4dc;background:#fff7fb}',
+    '.yp-foto img{width:100%;height:100%;object-fit:cover;display:block}',
+    '.yp-foto button{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:50%;border:none;background:rgba(59,31,46,.75);color:#fff;font-size:14px;line-height:24px;padding:0;cursor:pointer}',
   ].join('');
   document.head.appendChild(css);
 
@@ -253,6 +260,40 @@
       borrar: function () { try { sessionStorage.removeItem(k); } catch (x) {} base = JSON.stringify(leerV()); },
     };
   }
-  window.YP = { sesion: leerSesion, cambiar: function () { cerrar(''); }, puede: function (m) { return puede(leerSesion(), m); }, avance: avance };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar); else arrancar();
+  // ── Fotos (Luis, 20/11): en todo campo de fotos del equipo, "Tomar foto" (abre la cámara) o "Adjuntar foto" (galería).
+  // Se van juntando; cada una se puede quitar. Las páginas leen la lista con YP.fotos(input) y la vacían con YP.fotosLimpiar(input).
+  function mejorarFotos(inp) {
+    if (inp._ypFotos) return;
+    inp._ypFotos = [];
+    var caja = document.createElement('div'); caja.className = 'yp-fotos';
+    caja.innerHTML = '<div class="yp-fotos-bt"><button type="button" data-c="1">📷 Tomar foto</button><button type="button">🖼️ Adjuntar foto</button></div><div class="yp-fotos-l" aria-live="polite"></div>';
+    var cam = document.createElement('input'); cam.type = 'file'; cam.accept = 'image/*'; cam.setAttribute('capture', 'environment'); cam.hidden = true; cam.tabIndex = -1;
+    inp.hidden = true; inp.tabIndex = -1;
+    inp.parentNode.insertBefore(caja, inp.nextSibling); caja.appendChild(cam);
+    var lista = caja.querySelector('.yp-fotos-l');
+    inp._ypPintar = function () {
+      lista.innerHTML = '';
+      inp._ypFotos.forEach(function (f, i) {
+        var d = document.createElement('div'); d.className = 'yp-foto';
+        var im = document.createElement('img'); im.alt = 'Foto ' + (i + 1); im.src = URL.createObjectURL(f); im.onload = function () { URL.revokeObjectURL(im.src); };
+        var x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'Quitar foto ' + (i + 1));
+        x.onclick = function (e) { e.preventDefault(); inp._ypFotos.splice(i, 1); inp._ypPintar(); inp.dispatchEvent(new Event('change', { bubbles: true })); };
+        d.appendChild(im); d.appendChild(x); lista.appendChild(d);
+      });
+    };
+    var sumar = function (el) { [].slice.call(el.files || []).forEach(function (f) { inp._ypFotos.push(f); }); el.value = ''; inp._ypPintar(); };
+    caja.querySelector('.yp-fotos-bt').addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return; e.preventDefault();
+      (b.getAttribute('data-c') ? cam : inp).click();
+    });
+    cam.addEventListener('change', function (e) { e.stopPropagation(); sumar(cam); inp.dispatchEvent(new Event('change', { bubbles: true })); });
+    inp.addEventListener('change', function () { if (inp.files && inp.files.length) sumar(inp); });
+  }
+  function buscarFotos(raiz) { [].slice.call((raiz || document).querySelectorAll('input[type=file][accept^="image"]:not([capture])')).forEach(mejorarFotos); }
+  try { new MutationObserver(function () { buscarFotos(); }).observe(document.documentElement, { childList: true, subtree: true }); } catch (e) {}
+  var fotosDe = function (inp) { if (!inp) return []; if (!inp._ypFotos) mejorarFotos(inp); return inp._ypFotos.slice(); };
+  var fotosLimpiar = function (inp) { if (inp && inp._ypFotos) { inp._ypFotos = []; inp._ypPintar(); } if (inp) inp.value = ''; };
+
+  window.YP = { sesion: leerSesion, cambiar: function () { cerrar(''); }, puede: function (m) { return puede(leerSesion(), m); }, avance: avance, fotos: fotosDe, fotosLimpiar: fotosLimpiar };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { arrancar(); buscarFotos(); }); else { arrancar(); buscarFotos(); }
 })();
