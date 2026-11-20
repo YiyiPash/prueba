@@ -62,6 +62,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 footer.nav{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);
   padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));z-index:5}
 footer.nav .in{max-width:520px;margin:0 auto;display:grid;grid-template-columns:1fr 2fr;gap:10px}
+footer.nav .btn{padding:13px 8px;font-size:15px;line-height:1.2}
 .err{color:var(--bad);font-size:13.5px;min-height:1px}
 .result{display:flex;gap:12px;align-items:center;justify-content:space-between;border:1.5px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;background:var(--surface);width:100%;text-align:left;font-family:inherit;color:var(--fg)}
 .result:hover{border-color:var(--accent)}
@@ -300,7 +301,6 @@ a.where{text-decoration:none;color:var(--accent);font-weight:600}
       <p class="q">¿Le mandamos el manual de cuidados por WhatsApp?</p>
       <div class="seg" id="segManual"><button class="chip" type="button" data-v="si">Sí</button><button class="chip" type="button" data-v="no">No</button></div>
       <label class="f">Notas del equipo <span class="opc">(opcional, solo las ve el equipo)</span><textarea id="notasEquipo" placeholder="Algo que no esté contemplado arriba"></textarea></label>
-      <p class="hint" style="margin:0">El Pink Club se pregunta en la nota de venta.</p>
     </div>
     <div id="despuesWrap" style="margin-top:12px">
       <button class="btn sec" type="button" id="btnDespues">Guardar y firmar después</button>
@@ -438,6 +438,7 @@ a.where{text-decoration:none;color:var(--accent);font-weight:600}
 
 <footer class="nav"><div class="in">
   <button class="btn sec" type="button" id="back">Atrás</button>
+  <button class="btn sec" type="button" id="despuesNav" hidden>Guardar y firmar después</button>
   <button class="btn" type="button" id="next">Siguiente</button>
 </div></footer>
 
@@ -552,13 +553,14 @@ function show(n){
   $('stepname').textContent=n?steps[n].dataset.name:'';
   $('back').hidden=atras(n)===undefined;
   const firmar=S.modo==='firmar';
-  const labels={0:'Guardar clave',2:firmar?'Listo, volver a la firma':'Revisar con la clienta y firmar',7:'Firmar y terminar',9:firmar?'Volver a Por firmar':'Siguiente clienta'};
+  const labels={0:'Guardar clave',2:firmar?'Listo, volver a la firma':'Revisar y firmar',7:'Firmar y terminar',9:firmar?'Volver a Por firmar':'Siguiente clienta'};
   $('next').textContent=labels[n]||'Siguiente';
   $('next').hidden=n===10;
-  $('despuesWrap').hidden=firmar;
+  $('despuesWrap').hidden=true;   // el botón vive abajo, junto a "Revisar y firmar"
+  $('despuesNav').hidden=!(n===2&&!firmar);
   $('segServicio').hidden=firmar;          // al firmar no se cambia de perforación a tatuaje: el texto ya lo leyó
   $('formTit').textContent=firmar?'Revisa antes de firmar':'Generar consentimiento';
-  $('back').parentElement.style.gridTemplateColumns=($('back').hidden||$('next').hidden)?'1fr':'1fr 2fr';
+  $('back').parentElement.style.gridTemplateColumns=!$('despuesNav').hidden?'1fr 1fr':(($('back').hidden||$('next').hidden)?'1fr':'1fr 2fr');
   $('whereBtn').hidden=true;
   if(n===2){renderZonas();ponerServicio(S.servicio);pintarIndicaciones();$('secIndic').hidden=S.modo==='firmar';}
   if(n===7){setTimeout(sizeCanvas,0);renderResumen();}
@@ -650,8 +652,6 @@ function validar(n){
     if(!S.perfos.length)return F('Elige al menos una zona.','btnOtraZona');
     let i=S.perfos.findIndex(p=>!p.zona.trim());
     if(i>=0)return F(S.perfos[i].custom?'Escribe el nombre de la otra zona.':`Elige la zona ${i+1}.`,document.querySelector(S.perfos[i].custom?`#perfos [data-zt="${i}"]`:`#perfos [data-zs="${i}"]`));
-    i=S.perfos.findIndex(p=>!p.lado);
-    if(i>=0)return F(`Elige el lado de: ${S.perfos[i].zona}.`,document.querySelector(`#perfos [data-zl="${i}"]`));
   }
   if(n===4){
     const e=edad($('fn').value);
@@ -722,14 +722,15 @@ function elegir(p){
   S.persona=Object.assign({},p);
   $('apodo').value=p.apodo;$('nombre').value=p.nombre;$('wa').value=p.wa;
   pintarClienta();
-  pedirDetalle(p.id);
+  pedirDetalle(p.id,true);
   $('q').value='';$('results').innerHTML='';
-  $('secServicio').scrollIntoView({behavior:'smooth',block:'start'});
+  $('secServicio').scrollIntoView({block:'start'});
 }
-function pedirDetalle(id){
-  S.detalle=(DEMO?Promise.resolve(DEMO_PERSONAS.find(x=>x.id===id)):api('consent_detalle',{id}))
+function pedirDetalle(id,conEspera){
+  if(conEspera)cargando('Trayendo sus datos y su salud de la última vez…');
+  const pr=S.detalle=(DEMO?Promise.resolve(DEMO_PERSONAS.find(x=>x.id===id)):api('consent_detalle',{id}))
     .then(d=>{if(S.persona&&S.persona.id===d.id)llenarDetalle(d);S.detalle=null;});
-  S.detalle.catch(()=>{});
+  pr.catch(x=>{if(conEspera)toast('No pude traer sus datos: '+x.message,true);}).finally(()=>{if(conEspera)sinCarga();});
 }
 // Antes de pasarle el celular, sus datos ya deben estar puestos
 async function esperarDetalle(){
@@ -766,6 +767,7 @@ function llenarDetalle(p){
     $('saludPrev').innerHTML=`Esto nos dijo el <b>${fmt(new Date(u.fecha+'T12:00'))}</b>. Pregúntale y cambia lo que ya no sea igual.`;
     pintarChips();
   }
+  guardarBorrador();
 }
 // Clienta elegida de la lista: se ve arriba de sus datos, con opción de cambiarla
 function pintarClienta(){
@@ -837,7 +839,7 @@ function renderPerfos(){
   if(!S.perfos.length)S.perfos.push({zona:'',lado:'',serv:'',custom:false});
   $('perfos').innerHTML=S.perfos.map((p,i)=>{const lados=p.zona||p.custom?ladosDe(p):CFG.ladosDefault;return `<div class="zfila" id="perfo${i}">
     <div class="zrow"><select data-zs="${i}" aria-label="Zona ${i+1}">${zOpts(p.custom?'__otra':p.zona)}</select>
-      <select data-zl="${i}" aria-label="Lado ${i+1}"${lados.length===1?' disabled':''}>${lados.length===1?'':'<option value="">Lado…</option>'}${lados.map(l=>`<option${p.lado===l?' selected':''}>${esc(l)}</option>`).join('')}</select>
+      <select data-zl="${i}" aria-label="Lado ${i+1}"${lados.length===1?' disabled':''}>${lados.length===1?'':'<option value="">Sin lado</option>'}${lados.map(l=>`<option${p.lado===l?' selected':''}>${esc(l)}</option>`).join('')}</select>
       <button class="x" type="button" data-del="${i}" aria-label="Quitar zona ${i+1}">✕</button></div>
     ${p.custom?`<input type="text" data-zt="${i}" value="${esc(p.zona)}" placeholder="Nombre de la zona">
       <label class="f">Servicio para la nota<select data-sv="${i}"><option value="">Sin servicio</option>${Object.keys(CFG.servicios).map(k=>`<option value="${esc(k)}"${p.serv===k?' selected':''}>${esc(servNom(k))}</option>`).join('')}</select></label>`:''}
@@ -902,41 +904,45 @@ const DATOS_TXT='Los datos personales proporcionados en este documento serán tr
 // Declaración para mayores o para menores (aprobada por Luis el 27/10). Copia de consTextos() en Consentimiento.gs: si cambias una, cambia la otra.
 // Sin casillas (Luis, 19/11): lo de los datos de salud va dentro de la declaración. Igual en consTextoSalud() de Consentimiento.gs.
 function declaracion(){const d=declaracionBase(),e=edad($('fn').value),menor=e!==null&&e<18;
-  d.d2+=' '+(menor?`Autorizo que Yiyi Pash use los datos de salud de ${$('nombre').value.trim()} solo para su seguridad, como dice su aviso de privacidad.`
-    :'Autorizo que Yiyi Pash use mis datos de salud solo para mi seguridad, como dice su aviso de privacidad.');
+  d.d2+=' '+(menor?`Autorizo que YiyiPash use los datos de salud de ${$('nombre').value.trim()} solo para su seguridad, como dice su aviso de privacidad.`
+    :'Autorizo que YiyiPash use mis datos de salud solo para mi seguridad, como dice su aviso de privacidad.');
   return d;}
 function declaracionBase(){
-  const e=edad($('fn').value),menor=e!==null&&e<18,nombre=$('nombre').value.trim(),apodo=$('apodo').value.trim();
-  if(esTat())return declaracionTatuaje(e,menor,nombre,apodo);
-  const al=$('perforadora').value,pf=CFG.perforadoras.find(x=>x.alias===al);
-  const perfo=!al||al==='Otra persona'?'la perforadora':'la perforadora '+((pf&&pf.nombre)||al);
-  const riesgos='Se me explicaron el proceso, los cuidados necesarios y los posibles riesgos, como infección, rechazo o cicatrización irregular.';
-  const material='Confirmo que se me mostró el material nuevo, sellado y estéril, de uso personal, que será desechado después.';
-  const resp=`Entiendo y acepto que Yiyi Pash y ${perfo} no son responsables de complicaciones posteriores. Ante cualquier duda durante la curación, contactaré a Yiyi Pash.`;
-  const fotos=S.fotos==='si'?'Autorizo':'No autorizo';
-  if(menor){const t=$('tnombre').value.trim(),par=$('tpar').value.trim().toLowerCase();
-    return{d1:`Yo, ${t}, en mi calidad de ${par} y tutor(a) legal de ${nombre}, de ${e} años, en pleno uso de mis facultades, autorizo que se le realice la perforación descrita en este documento. Declaro que conozco el procedimiento al que se someterá. Expresé mis dudas y me fueron aclaradas. ${riesgos}`,
-      d2:`${material} Estaré presente durante el procedimiento y me comprometo a vigilar que ${apodo||nombre} siga las indicaciones de higiene y cuidados. ${resp}`,
-      fotos:`${fotos} que Yiyi Pash publique fotos y videos de la perforación de ${nombre} en sus redes sociales.`};}
-  return{d1:`Yo, ${nombre}, en pleno uso de mis facultades, declaro que conozco el procedimiento al que me someteré. Expresé mis dudas y me fueron aclaradas. ${riesgos}`,
-    d2:`${material} Me comprometo a seguir las indicaciones de higiene y cuidados. ${resp}`,
-    fotos:`${fotos} que Yiyi Pash publique fotos y videos de mi perforación en sus redes sociales.`};
+  const e=edad($('fn').value),menor=e!==null&&e<18,tat=esTat();
+  const nom=a=>(CFG.perforadoras.find(x=>x.alias===a)||{}).nombre||a;
+  const al=$('perforadora').value;
+  const ps=tat?[...new Set(S.tats.map(t=>t.tatuadora).filter(Boolean))].map(nom):(al&&al!=='Otra persona'?[nom(al)]:[]);
+  return textosDeclaracion({nombre:$('nombre').value.trim(),apodo:$('apodo').value.trim(),edad:e,menor,perforadoras:ps,fotos:S.fotos==='si',servicio:tat?'Tatuaje':'Perforación',
+    tutor:{nombre:$('tnombre').value.trim(),parentesco:$('tpar').value.trim()}});
 }
-// Copia de consTextosTatuaje() en Consentimiento.gs: si cambias una, cambia la otra.
-function declaracionTatuaje(e,menor,nombre,apodo){
-  const ps=[...new Set(S.tats.map(t=>t.tatuadora).filter(Boolean))].map(a=>(CFG.perforadoras.find(x=>x.alias===a)||{}).nombre||a);
-  const quien=ps.length>1?'las tatuadoras '+ps.slice(0,-1).join(', ')+' y '+ps[ps.length-1]:(ps.length?'la tatuadora '+ps[0]:'la tatuadora');
-  const riesgos='Se me explicaron el proceso, los cuidados necesarios y los posibles riesgos, como infección, reacción alérgica a la tinta o cicatrización irregular.';
-  const material='Confirmo que se me mostró el material nuevo y de uso personal (cartucho cerrado, nuevo y estéril; tinta vigente; guantes de nitrilo nuevos; material y máquina protegidos con playo), que será desechado después.';
-  const resp=`Entiendo y acepto que Yiyi Pash y ${quien} no son responsables de complicaciones posteriores. Ante cualquier duda durante la curación, contactaré a Yiyi Pash.`;
-  const fotos=S.fotos==='si'?'Autorizo':'No autorizo';
-  if(menor){const t=$('tnombre').value.trim(),par=$('tpar').value.trim().toLowerCase();
-    return{d1:`Yo, ${t}, en mi calidad de ${par} y tutor(a) legal de ${nombre}, de ${e} años, en pleno uso de mis facultades, autorizo que se le realice el tatuaje descrito en este documento. Declaro que conozco el procedimiento al que se someterá. Expresé mis dudas y me fueron aclaradas. ${riesgos}`,
-      d2:`${material} Estaré presente durante el procedimiento y me comprometo a vigilar que ${apodo||nombre} siga las indicaciones de higiene y cuidados. ${resp}`,
-      fotos:`${fotos} que Yiyi Pash publique fotos y videos del tatuaje de ${nombre} en sus redes sociales.`};}
-  return{d1:`Yo, ${nombre}, en pleno uso de mis facultades, declaro que conozco el procedimiento de tatuaje al que me someteré. Expresé mis dudas y me fueron aclaradas. ${riesgos}`,
-    d2:`${material} Me comprometo a seguir las indicaciones de higiene y cuidados. ${resp}`,
-    fotos:`${fotos} que Yiyi Pash publique fotos y videos de mi tatuaje en sus redes sociales.`};
+// Redacción del formato de siempre (Luis, 19/11). Copia de consTextos() en Consentimiento.gs: si cambias una, cambia la otra.
+function textosDeclaracion(x){
+  const ps=x.perforadoras||[],tat=x.servicio==='Tatuaje';
+  const rol=tat?['la tatuadora','las tatuadoras']:['la perforadora','las perforadoras'];
+  const quien=ps.length>1?rol[1]+' '+ps.slice(0,-1).join(', ')+' y '+ps[ps.length-1]:(ps.length?rol[0]+' '+ps[0]:rol[0]);
+  const riesgos=tat?'como infección, reacción alérgica a la tinta o cicatrización irregular':'como infección, rechazo o cicatrización irregular';
+  const material=tat?'el material nuevo y de uso personal (cartucho cerrado, nuevo y estéril; tinta vigente; guantes de nitrilo nuevos; material y máquina protegidos con playo)'
+    :'el material nuevo, sellado y estéril, de uso personal';
+  const dudas=`He expresado todas mis dudas, las cuales me han sido aclaradas, y se me ha explicado detalladamente el proceso, los cuidados necesarios y los posibles riesgos asociados, ${riesgos}.`;
+  const mat=`Asimismo, confirmo que se me ha mostrado ${material}, el cuál será desechado posteriormente.`;
+  const resp=`Entiendo y acepto que YiyiPash ni ${quien} serán responsables de complicaciones posteriores. En caso de dudas o inconvenientes durante el proceso de curación, asumo la responsabilidad de contactar a YiyiPash para recibir la orientación necesaria.`;
+  const doy=x.fotos?'Doy':'No doy';
+  if(x.menor){const t=x.tutor||{};
+    return{d1:`Yo, ${t.nombre}, en mi calidad de ${String(t.parentesco||'').toLowerCase()} y tutor(a) legal de ${x.nombre}, de ${x.edad} años, en pleno uso de mis facultades mentales, declaro ser consciente del procedimiento al que se someterá y autorizo que se le realice ${tat?'el tatuaje descrito':'la perforación descrita'} en este documento. ${dudas}`,
+      d2:`${mat} Estaré presente durante el procedimiento y me comprometo a vigilar que ${x.apodo||x.nombre} siga todas las indicaciones de higiene y cuidados posteriores proporcionadas por el profesional. ${resp}`,
+      fotos:`${doy} el consentimiento para que YiyiPash haga uso de las imágenes y videos de ${x.nombre} para publicación y promoción en sus redes sociales.`};}
+  return{d1:`Yo, ${x.nombre}, en pleno uso de mis facultades mentales, declaro ser consciente del procedimiento al que me someteré. ${dudas}`,
+    d2:`${mat} Me comprometo a seguir todas las indicaciones de higiene y cuidados posteriores proporcionadas por el profesional. ${resp}`,
+    fotos:`${doy} el consentimiento para que YiyiPash haga uso de mis imágenes y videos para publicación y promoción en sus redes sociales.`};
+}
+// Zonas como se leen: "Helix izquierdo y derecho, Septum". Copia de consZonasLegibles() en Consentimiento.gs.
+function zonasLegibles(lista){
+  const out=[],idx={};
+  (lista||[]).forEach(p=>{const z=String(p.zona||'').trim();if(!z)return;
+    const lados=p.lado==='Ambos'?['Izquierdo','Derecho']:(p.lado&&p.lado!=='Centro'?[p.lado]:[]);const k=z.toLowerCase();
+    if(idx[k]===undefined){idx[k]=out.length;out.push({z,l:[]});}
+    lados.forEach(l=>{if(!out[idx[k]].l.includes(l))out[idx[k]].l.push(l);});});
+  return out.map(o=>o.z+(o.l.length?' '+o.l.map(l=>l.toLowerCase()).join(' y '):'')).join(', ');
 }
 function consentHTML(){const d=declaracion();
   return `${$('textoConsent').innerHTML}<b>Declaración</b><p>${esc(d.d1)}</p><p>${esc(d.d2)}</p>${S.fotos?`<p><b>${esc(d.fotos)}</b></p>`:''}<p><i>${esc(DATOS_TXT)}</i></p>`;}
@@ -1027,7 +1033,7 @@ $('deshacer').onclick=()=>{
 };
 window.addEventListener('resize',()=>{if(S.step===7)sizeCanvas();});
 function firmante(){const e=edad($('fn').value);return e!==null&&e<18?{quien:'Tutor',nombre:$('tnombre').value.trim()}:{quien:'Clienta',nombre:$('nombre').value.trim()};}
-const perfTxt=()=>esTat()?S.tats.map(t=>`Tatuaje en ${t.zona}${t.dimensiones?' ('+t.dimensiones+')':''}`).join(', '):S.perfos.map(p=>`${p.zona}${p.lado==='Centro'?'':' '+p.lado.toLowerCase()}`).join(', ');
+const perfTxt=()=>esTat()?S.tats.map(t=>`Tatuaje en ${t.zona}${t.dimensiones?' ('+t.dimensiones+')':''}`).join(', '):zonasLegibles(S.perfos);
 // Material e indicaciones: salen del texto del consentimiento (perforación o tatuaje)
 function partesTexto(){
   const t=document.createElement('div');t.innerHTML=$('textoConsent').innerHTML;
@@ -1058,7 +1064,7 @@ function renderResumen(){
   $('matTxt').innerHTML=mat||'<p class="hint" style="margin:0">Material nuevo, cerrado y estéril.</p>';
   $('indTxt').innerHTML=ind||$('textoConsent').innerHTML;
   const d=declaracion();
-  $('declTxt').innerHTML=`<p>${esc(d.d1)}</p><p>${esc(d.d2)}</p><p><b>${esc(d.fotos)}</b></p><p class="datos">${esc(DATOS_TXT)}</p>`;
+  $('declTxt').innerHTML=`<p>${esc(d.d1)}</p><p>${esc(d.d2)}</p><p class="datos">${esc(DATOS_TXT)} ${esc(d.fotos)}</p><p style="font-weight:600;font-size:13px">En caso de que el solicitante sea menor de edad, la firma será emitida por el tutor.</p>`;
 }
 
 // ── Guardar ──────────────────────────────────────────────────────────
@@ -1073,7 +1079,7 @@ function payload(){
     salud:{tipo_sangre:$('sangre').value,enfermedades:[...S.salud.enf,$('enfOtra').value.trim()].filter(Boolean),condiciones:[...S.salud.cond,$('condOtra').value.trim()].filter(Boolean),
       fobias:S.salud.fob,alergias:[...(S.salud.ale||[]),$('alergias').value.trim()].filter(Boolean).join(', '),medicamentos:$('meds').value.trim()||(S.salud.med.length?'Ninguno':''),comentarios:$('coment').value.trim()},
     servicio:S.servicio,
-    perforaciones:esTat()?[]:perfosPorLado().map(p=>({zona:p.zona.trim(),lado:p.lado,sku_serv:p.serv||'',perforadora:$('perforadora').value})),
+    perforaciones:esTat()?[]:perfosPorLado().map(p=>({zona:p.zona.trim(),lado:p.lado||'Centro',sku_serv:p.serv||'',perforadora:$('perforadora').value})),
     tatuajes:esTat()?S.tats.map(t=>({zona:t.zona.trim(),dimensiones:t.dimensiones.trim(),sku_serv:t.sku,tamano:servNom(t.sku),color:t.color,prueba:t.prueba,tipo:t.tipo,tatuadora:t.tatuadora})):[],
     autorizaciones:{consentimiento:true,datos_salud:true,fotos:true,manual_whatsapp:S.manual==='si',
       pink:S.persona&&S.persona.pink?'ya_es':'nota',aviso:false,marketing_wa:false},
@@ -1105,7 +1111,7 @@ async function guardarDespues(){
   S.sinFirma=true;S.payload=payload();S.res=null;S.errGuardar=null;
   enviarYEsperar('Guardando sin firma…');
 }
-$('btnDespues').onclick=()=>guardarDespues().catch(x=>{sinCarga();toast('Algo falló: '+x.message,true);});
+$('btnDespues').onclick=$('despuesNav').onclick=()=>guardarDespues().catch(x=>{sinCarga();toast('Algo falló: '+x.message,true);});
 function enviar(){
   if(S.modo==='firmar')return enviarFirma();
   const data=S.payload;
@@ -1391,7 +1397,7 @@ function pintarZLista(){
 $('zAgregar').onclick=()=>{zTmp.push({zona:'',lado:'',serv:'',custom:false});pintarZLista();const s=[...$('zLista').querySelectorAll('[data-zs]')].pop();if(s)s.focus();};
 $('zOk').onclick=()=>{
   if(!zTmp.length)return $('zErr').textContent='Debe quedar al menos una zona.';
-  const i=zTmp.findIndex(p=>!p.zona.trim()),j=zTmp.findIndex(p=>!p.lado);
+  const i=zTmp.findIndex(p=>!p.zona.trim()),j=-1;   // el lado es opcional
   if(i>=0)return $('zErr').textContent='Elige o escribe la zona '+(i+1)+'.';
   if(j>=0)return $('zErr').textContent='Elige el lado de: '+zTmp[j].zona+'.';
   S.perfos=zTmp;$('zSheet').hidden=true;renderResumen();guardarBorrador();toast('Zonas confirmadas');
@@ -1434,6 +1440,8 @@ function retomarBorrador(){
   revisarEdad();pintarChips();
   document.querySelectorAll('#segManual .chip').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===S.manual));
   pintarClienta();if(S.persona)pintarReemplazo(S.persona.hoy||[]);
+  const sinSalud=!$('sangre').value&&!S.salud.enf.length;
+  if(S.persona&&sinSalud)setTimeout(()=>pedirDetalle(S.persona.id,true),0);   // se salió antes de que llegaran sus datos
   if(b.reemplaza){S.reemplaza=b.reemplaza;const r=$('reemplazoBox').querySelector(`[data-rz="${b.reemplaza}"]`);if(r)r.setAttribute('aria-pressed','true');}
   ponerServicio(S.servicio);
   S.restaurando=false;show(b.step);
