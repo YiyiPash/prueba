@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <title>PRUEBA · Yiyi Pash · Notas</title><meta name="robots" content="noindex"><script>document.addEventListener('DOMContentLoaded',function(){var d=document.createElement('div');d.textContent='PRUEBA · nada de lo que hagas aquí es real';d.style.cssText='position:sticky;top:0;z-index:99999;background:#b91c1c;color:#fff;text-align:center;font:700 13px/1.4 system-ui,sans-serif;padding:6px 8px';document.body.insertBefore(d,document.body.firstChild);});</script><link rel="icon" type="image/png" sizes="32x32" href="https://yiyipash.com/prueba/icono-32.png"><link rel="icon" type="image/png" sizes="192x192" href="https://yiyipash.com/prueba/icono-192.png"><link rel="apple-touch-icon" href="https://yiyipash.com/prueba/icono-180.png">
+  <script src="../sesion.js" data-pagina="nota"></script>
+<title>PRUEBA · Yiyi Pash · Notas</title><meta name="robots" content="noindex"><script>document.addEventListener('DOMContentLoaded',function(){var d=document.createElement('div');d.textContent='PRUEBA · nada de lo que hagas aquí es real';d.style.cssText='position:sticky;top:0;z-index:99999;background:#b91c1c;color:#fff;text-align:center;font:700 13px/1.4 system-ui,sans-serif;padding:6px 8px';document.body.insertBefore(d,document.body.firstChild);});</script><link rel="icon" type="image/png" sizes="32x32" href="https://yiyipash.com/prueba/icono-32.png"><link rel="icon" type="image/png" sizes="192x192" href="https://yiyipash.com/prueba/icono-192.png"><link rel="apple-touch-icon" href="https://yiyipash.com/prueba/icono-180.png">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -1534,9 +1535,11 @@ function bloquearElaboro(){
   const tab=getTab(),sel=document.getElementById('elaboro-sel'),b=document.getElementById('elaboro-cambiar'),n=document.getElementById('elaboro-nota');
   if(!tab||!sel)return;
   const fijo=!!(tab.elaboro&&tab.elaboro.id)&&!tab.elaboro_libre;
-  sel.disabled=fijo;b.style.display=fijo?'':'none';
+  // Fase 2: sale del perfil que entró con su PIN; solo un dueño puede cambiarlo
+  const s=window.YP_SESION,dueno=!s||s.clave_rol==='dueno';
+  sel.disabled=fijo;b.style.display=fijo&&dueno?'':'none';
   n.textContent=!fijo?(localStorage.getItem('ypp_elaboro_id')?'':'Elige quién usa este celular; se queda guardado.')
-    :(tab.prenota?'Lo hizo quien guardó la prenota.':'Quien está registrado en este celular.');
+    :(tab.prenota?'Lo hizo quien guardó la prenota.':s?'Quien entró con su PIN.':'Quien está registrado en este celular.');
 }
 function cambiarElaboro(){
   const tab=getTab();
@@ -1599,6 +1602,7 @@ init();
 // Fechas de nacimiento: el calendario no deja elegir días después de hoy ni de hace más de 110 años
 (function(){const h=new Date(),d=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0');
   document.querySelectorAll('input[data-nac]').forEach(x=>{x.max=d;x.min=(h.getFullYear()-110)+'-01-01';});})();
+document.addEventListener('yp-sesion',()=>{try{bloquearElaboro();}catch(e){}});   // fase 2: "Cambiar" solo para dueños
 </script>
 </body>
 </html>

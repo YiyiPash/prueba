@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script src="sesion.js" data-pagina="clientas"></script>
 <title>PRUEBA · Panel de clientas · Yiyi Pash</title><meta name="robots" content="noindex"><script>document.addEventListener('DOMContentLoaded',function(){var d=document.createElement('div');d.textContent='PRUEBA · nada de lo que hagas aquí es real';d.style.cssText='position:sticky;top:0;z-index:99999;background:#b91c1c;color:#fff;text-align:center;font:700 13px/1.4 system-ui,sans-serif;padding:6px 8px';document.body.insertBefore(d,document.body.firstChild);});</script><link rel="icon" type="image/png" sizes="32x32" href="https://yiyipash.com/prueba/icono-32.png"><link rel="icon" type="image/png" sizes="192x192" href="https://yiyipash.com/prueba/icono-192.png"><link rel="apple-touch-icon" href="https://yiyipash.com/prueba/icono-180.png">
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Titan+One&display=swap">
@@ -74,7 +75,7 @@ label{display:grid;gap:4px;font-size:13px;font-weight:600}
       </div>
       <label for="fn">Fecha de nacimiento<input type="date" id="fn" data-nac></label>
       <label for="claveD" id="lClave" hidden>Clave de Luis y Yoltic (para cambiar la fecha)<input type="password" id="claveD" autocomplete="off"></label>
-      <label for="por">¿Quién hace el cambio?<input id="por" autocomplete="off"></label>
+      <label for="por" id="lPor">¿Quién hace el cambio?<input id="por" autocomplete="off"></label>
       <p class="mu">Aquí no se cambia la salud ni lo que ya firmó la clienta.</p>
       <p class="err" id="eForm" hidden></p>
       <button class="btn" type="submit" id="bGuardar">Guardar cambios</button>
@@ -144,7 +145,8 @@ function pintar(c,msg){
   CAMPOS.forEach(k=>{$(k).value=c[k]||'';});
   $('bTutor').hidden=c.tipo==='Titular'&&!c.tutor_nombre;
   $('fn').value=c.fn||'';$('claveD').value='';$('lClave').hidden=true;
-  if(!$('por').value)$('por').value=leer('ypp_elaboro_alias');
+  if(window.YP_SESION)$('por').value=YP_SESION.nombre;   // con perfil, el nombre sale de la sesión
+  else if(!$('por').value)$('por').value=leer('ypp_elaboro_alias');
   error('eForm','');
   $('historial').hidden=!c.cambios.length;
   $('historial').innerHTML='<h2>Cambios</h2>'+c.cambios.map(x=>'<div class="ev"><b>'+esc(NOMBRES[x.campo]||x.campo)+'</b> · '+esc(x.por)+' · '+esc(x.fecha)+'<br>'+esc(x.antes||'(vacío)')+' → '+esc(x.despues||'(vacío)')+'</div>').join('');
@@ -202,6 +204,7 @@ $('f').onsubmit=async e=>{
 // Fecha de nacimiento: el calendario no deja elegir días después de hoy ni de hace más de 110 años
 (function(){const h=new Date(),d=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0');
   document.querySelectorAll('input[data-nac]').forEach(x=>{x.max=d;x.min=(h.getFullYear()-110)+'-01-01';});$('pFecha').max=d;})();
+document.addEventListener('yp-sesion',e=>{$('lPor').hidden=true;$('por').value=e.detail.nombre;});
 if(leer('yp_pink_clave'))cargarLista().catch(()=>{});   // la lista ya está lista cuando empiezan a escribir
 </script>
 </body>

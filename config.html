@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script src="sesion.js" data-pagina="config"></script>
+<title>PRUEBA · Configuración · Yiyi Pash</title><meta name="robots" content="noindex"><script>document.addEventListener('DOMContentLoaded',function(){var d=document.createElement('div');d.textContent='PRUEBA · nada de lo que hagas aquí es real';d.style.cssText='position:sticky;top:0;z-index:99999;background:#b91c1c;color:#fff;text-align:center;font:700 13px/1.4 system-ui,sans-serif;padding:6px 8px';document.body.insertBefore(d,document.body.firstChild);});</script><link rel="icon" type="image/png" sizes="32x32" href="https://yiyipash.com/prueba/icono-32.png"><link rel="icon" type="image/png" sizes="192x192" href="https://yiyipash.com/prueba/icono-192.png"><link rel="apple-touch-icon" href="https://yiyipash.com/prueba/icono-180.png">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap">
+<style>
+/* Configuración (fase 2, solo dueños): zonas y lados, lugares y textos de los mensajes. Misma marca que el Inicio; color del módulo: pizarra. */
+:root{
+  --bg:#ffe1ee; --surface:#ffffff; --fg:#3b1f2e; --mu:#7d5468; --line:#f8c4dc;
+  --accent:#d6347f; --accent2:#ff74af; --on-accent:#ffffff; --bad:#c0262d; --ok:#15803d; --ok-bg:#dcfce7;
+  --conf:#4b5a74; --conf2:#dde3ee; --soft:#fff7fb;
+  --font:'Montserrat',system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.45;
+  padding:14px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
+.app{max-width:560px;margin:0 auto;display:grid;gap:12px}
+.volver{font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;justify-self:start}
+h1{font-weight:700;font-size:23px;line-height:1.2;color:#b82a6c;margin:0;letter-spacing:-.2px;text-wrap:balance}
+h2{font-size:12.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--conf);margin:10px 0 0;display:flex;align-items:center;gap:7px}
+h2::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--conf)}
+h3{font-size:15px;margin:0}
+.card{background:var(--surface);border:1.5px solid var(--conf2);border-radius:16px;padding:14px;display:grid;gap:10px;box-shadow:0 2px 0 var(--conf2)}
+input,select,textarea{width:100%;font:inherit;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--fg)}
+textarea{min-height:140px;resize:vertical}
+label{display:grid;gap:4px;font-size:13px;font-weight:600}
+.btn{border:none;border-radius:999px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--on-accent);font-family:inherit;font-weight:700;font-size:14px;padding:11px 14px;cursor:pointer}
+.btn.sec{background:#fff;color:var(--accent);border:1.5px solid var(--line)}
+.btn:disabled{opacity:.6;cursor:default}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.chip button:focus-visible,.mini:focus-visible{outline:3px solid var(--accent2);outline-offset:2px}
+.mu{font-size:13px;color:var(--mu);margin:0}
+.err{color:var(--bad);font-size:13px;margin:0}
+.ok{background:var(--ok-bg);color:var(--ok);border-radius:10px;padding:9px 12px;font-size:13px;font-weight:600;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1.5px solid var(--line);background:var(--soft);border-radius:999px;padding:3px 4px 3px 11px;font-size:13.5px}
+.chip.centro{border-color:var(--conf);background:var(--conf2)}
+.chip button{border:none;background:none;font:inherit;font-size:12px;font-weight:700;color:var(--mu);cursor:pointer;padding:3px 7px;border-radius:999px}
+.chip button.c{color:var(--conf)}
+.fila{display:flex;gap:8px;align-items:center}
+.fila>input{flex:1;min-width:0}
+.fila .btn{white-space:nowrap}
+.lug{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.lug:first-child{border-top:none}
+.lug small{display:block;color:var(--mu);font-size:12px}
+.lug.off b{color:var(--mu);text-decoration:line-through}
+.mini{border:1.5px solid var(--line);background:#fff;color:var(--accent);font:inherit;font-size:12.5px;font-weight:700;border-radius:999px;padding:5px 11px;cursor:pointer;white-space:nowrap}
+.vista{background:var(--soft);border:1.5px dashed var(--line);border-radius:12px;padding:10px 12px;font-size:13.5px;white-space:pre-wrap}
+.giro{width:44px;height:44px;margin:0 auto 14px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--accent);animation:giro .8s linear infinite}
+@keyframes giro{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.giro{animation-duration:2.4s}}
+#cargador{position:fixed;inset:0;z-index:50;background:rgba(255,225,238,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:var(--accent);text-align:center;padding:24px}
+</style>
+</head>
+<body>
+<div class="app">
+  <a class="volver" href="./">← Inicio</a>
+  <h1>Configuración</h1>
+  <p class="mu">Lo que cambies aquí se ve al momento en el consentimiento y en la nota. Cada cambio queda anotado con tu nombre.</p>
+  <p class="ok" id="aviso" hidden></p>
+  <p class="err" id="eGeneral" hidden></p>
+
+  <h2>Zonas y lados</h2>
+  <p class="mu">Cada zona va en el servicio que se cobra. Toca <b>centro</b> en las zonas que solo se hacen al centro (septum, ombligo…).</p>
+  <div id="servicios" class="app" style="gap:10px;width:100%"></div>
+  <div class="card">
+    <h3>Lados que se pueden elegir</h3>
+    <div class="chips" id="lados"></div>
+    <div class="fila"><input id="ladoNuevo" placeholder="Lado nuevo" autocomplete="off"><button class="btn sec" type="button" id="bLado">Agregar</button></div>
+    <button class="btn" type="button" id="bLados">Guardar lados</button>
+    <p class="err" id="eLados" hidden></p>
+  </div>
+
+  <h2>Lugares</h2>
+  <div class="card">
+    <div id="lugares"></div>
+    <h3 style="margin-top:6px">Agregar lugar</h3>
+    <label for="lugNombre">Nombre<input id="lugNombre" autocomplete="off" placeholder="Ej. Bazar Coyoacán"></label>
+    <label for="lugCat">Categoría (como en finanzas)<select id="lugCat"></select></label>
+    <p class="mu">Se crea su carpeta para los PDFs de los consentimientos.</p>
+    <button class="btn" type="button" id="bLugar">Agregar lugar</button>
+    <p class="err" id="eLugar" hidden></p>
+  </div>
+
+  <h2>Textos de los mensajes</h2>
+  <div class="card">
+    <label for="msgSel">Mensaje<select id="msgSel"></select></label>
+    <label for="msgTxt">Texto<textarea id="msgTxt"></textarea></label>
+    <p class="mu" id="msgVars"></p>
+    <div><p class="mu" style="margin-bottom:4px">Así se vería:</p><div class="vista" id="msgVista"></div></div>
+    <button class="btn" type="button" id="bMsg">Guardar mensaje</button>
+    <p class="err" id="eMsg" hidden></p>
+  </div>
+</div>
+<div id="cargador" hidden><div class="giro" aria-hidden="true"></div><span id="cargaTxt">Cargando…</span></div>
+<script>
+const AS_URL='https://script.google.com/macros/s/AKfycbwOhVk8lowZwedDv-J0wOCparRSL1MZu9ybJXJ6oru5Br87eLRgtO6Ny10sv947ciuv/exec';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const leer=k=>{try{return localStorage.getItem(k)||'';}catch(e){return '';}};
+let C=null,zonasTmp={},ladosTmp=[];
+async function api(action,data,texto){
+  $('cargaTxt').textContent=texto||'Guardando…';$('cargador').hidden=false;
+  try{
+    const res=await fetch(AS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(Object.assign({action,clave:leer('yp_pink_clave')},data||{})),redirect:'follow'});
+    const j=await res.json();
+    if(!j.ok)throw new Error(j.error||'Error del servidor');
+    return j.data;
+  }finally{$('cargador').hidden=true;}
+}
+function error(id,msg){$(id).textContent=msg||'';$(id).hidden=!msg;}
+function aviso(msg){$('aviso').textContent=msg;$('aviso').hidden=!msg;if(msg)setTimeout(()=>{if($('aviso').textContent===msg)$('aviso').hidden=true;},5000);}
+
+function pintar(c){
+  C=c;zonasTmp={};c.servicios.forEach(s=>zonasTmp[s.sku]=s.zonas.map(z=>Object.assign({},z)));ladosTmp=c.lados.slice();
+  pintarServicios();pintarLados();pintarLugares();pintarMensajes();
+}
+// ── Zonas ──
+function pintarServicios(){
+  $('servicios').innerHTML=C.servicios.map(s=>`<div class="card" data-sku="${esc(s.sku)}">
+    <h3>${esc(s.nombre)} <span class="mu" style="font-weight:500">${esc(s.sku)}</span></h3>
+    <div class="chips">${zonasTmp[s.sku].map((z,i)=>`<span class="chip${z.centro?' centro':''}">${esc(z.z)}<button type="button" class="c" data-centro="${i}" aria-pressed="${z.centro}" title="Solo al centro">${z.centro?'centro ✓':'centro'}</button><button type="button" data-quitar="${i}" aria-label="Quitar ${esc(z.z)}">✕</button></span>`).join('')||'<span class="mu">Sin zonas</span>'}</div>
+    <div class="fila"><input placeholder="Zona nueva" autocomplete="off" data-nueva><button class="btn sec" type="button" data-agregar>Agregar</button></div>
+    <button class="btn" type="button" data-guardar ${cambioZonas(s)?'':'disabled'}>Guardar zonas</button>
+    <p class="err" data-err hidden></p></div>`).join('');
+}
+const textoZonas=l=>l.map(z=>z.z+(z.centro?' (centro)':'')).join(', ');
+const cambioZonas=s=>textoZonas(zonasTmp[s.sku])!==textoZonas(s.zonas);
+$('servicios').onclick=async e=>{
+  const card=e.target.closest('[data-sku]');if(!card)return;
+  const sku=card.dataset.sku,l=zonasTmp[sku],s=C.servicios.find(x=>x.sku===sku),err=card.querySelector('[data-err]');
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.centro!==undefined){l[+b.dataset.centro].centro=!l[+b.dataset.centro].centro;return pintarServicios();}
+  if(b.dataset.quitar!==undefined){l.splice(+b.dataset.quitar,1);return pintarServicios();}
+  if(b.hasAttribute('data-agregar')){
+    const inp=card.querySelector('[data-nueva]'),z=inp.value.replace(/[(),]/g,' ').replace(/\s+/g,' ').trim();
+    if(!z)return;
+    if(l.some(x=>x.z.toLowerCase()===z.toLowerCase())){err.textContent='Esa zona ya está.';err.hidden=false;return;}
+    l.push({z,centro:false});pintarServicios();
+    const n=$('servicios').querySelector(`[data-sku="${CSS.escape(sku)}"] [data-nueva]`);if(n)n.focus();return;
+  }
+  if(b.hasAttribute('data-guardar')){
+    try{pintar(await api('consent_cfg_zonas',{sku,zonas:l,antes:s.texto},'Guardando zonas…'));aviso('Zonas de '+s.nombre+' guardadas.');}
+    catch(x){err.textContent=x.message;err.hidden=false;}
+  }
+};
+$('servicios').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('[data-nueva]')){e.preventDefault();e.target.closest('[data-sku]').querySelector('[data-agregar]').click();}});
+// ── Lados ──
+function pintarLados(){
+  $('lados').innerHTML=ladosTmp.map((l,i)=>`<span class="chip">${esc(l)}<button type="button" data-i="${i}" aria-label="Quitar ${esc(l)}">✕</button></span>`).join('');
+  $('bLados').disabled=ladosTmp.join()===C.lados.join();
+}
+$('lados').onclick=e=>{const b=e.target.closest('[data-i]');if(!b)return;ladosTmp.splice(+b.dataset.i,1);pintarLados();};
+$('bLado').onclick=()=>{const v=$('ladoNuevo').value.replace(/,/g,' ').trim();if(!v)return;if(!ladosTmp.some(x=>x.toLowerCase()===v.toLowerCase()))ladosTmp.push(v);$('ladoNuevo').value='';pintarLados();};
+$('ladoNuevo').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('bLado').click();}};
+$('bLados').onclick=async()=>{error('eLados','');try{pintar(await api('consent_cfg_lados',{lados:ladosTmp},'Guardando lados…'));aviso('Lados guardados.');}catch(x){error('eLados',x.message);}};
+// ── Lugares ──
+function pintarLugares(){
+  $('lugares').innerHTML=C.lugares.map(l=>`<div class="lug${l.activo?'':' off'}"><span><b>${esc(l.lugar)}</b><small>${esc(l.categoria||'Sin categoría')}${l.activo?'':' · oculto'}</small></span>
+    <button class="mini" type="button" data-lugar="${esc(l.lugar)}" data-activo="${l.activo?0:1}">${l.activo?'Ocultar':'Mostrar'}</button></div>`).join('');
+  $('lugCat').innerHTML='<option value="">Elige…</option>'+C.categorias.map(c=>`<option>${esc(c)}</option>`).join('');
+}
+$('lugares').onclick=async e=>{
+  const b=e.target.closest('[data-lugar]');if(!b)return;error('eLugar','');
+  try{pintar(await api('consent_cfg_lugar_activo',{lugar:b.dataset.lugar,activo:b.dataset.activo==='1'}));aviso(b.dataset.activo==='1'?'Lugar visible otra vez.':'Lugar oculto: ya no sale en el consentimiento ni en la nota.');}
+  catch(x){error('eLugar',x.message);}
+};
+$('bLugar').onclick=async()=>{
+  error('eLugar','');const lugar=$('lugNombre').value.trim(),categoria=$('lugCat').value;
+  if(!lugar)return error('eLugar','Escribe el nombre del lugar.');
+  if(!categoria)return error('eLugar','Elige la categoría.');
+  try{pintar(await api('consent_cfg_lugar',{lugar,categoria},'Agregando lugar y su carpeta…'));$('lugNombre').value='';aviso(lugar+' agregado.');}
+  catch(x){error('eLugar',x.message);}
+};
+// ── Mensajes ──
+const EJEMPLO={nombre:'Ana',apodo:'Anita',tutor:'Rosa',id:'ANA-0001',puntos:'120',fecha:'15/12/2026',zonas:'Helix izquierdo',url:'https://…',liga:'https://yiyipash.com/pink/',accion:'retirar los aros de silicón'};
+function pintarMensajes(){
+  const sel=$('msgSel').value;
+  $('msgSel').innerHTML=C.mensajes.map(m=>`<option value="${esc(m.clave)}">${esc(m.nombre)}</option>`).join('');
+  if(sel&&C.mensajes.some(m=>m.clave===sel))$('msgSel').value=sel;
+  cargarMsg();
+}
+const msgActual=()=>C.mensajes.find(m=>m.clave===$('msgSel').value);
+function cargarMsg(){const m=msgActual();if(!m)return;$('msgTxt').value=m.texto;vistaMsg();error('eMsg','');}
+function vistaMsg(){
+  const m=msgActual();if(!m)return;
+  $('msgVars').innerHTML=m.variables.length?'Se llenan solas: '+m.variables.map(v=>'<b>'+esc(v)+'</b>').join(', '):'Este mensaje no lleva datos que se llenen solos.';
+  $('msgVista').textContent=$('msgTxt').value.replace(/\{([a-z_]+)\}/gi,(t,k)=>EJEMPLO[k]||t);
+  $('bMsg').disabled=$('msgTxt').value.trim()===m.texto.trim();
+}
+$('msgSel').onchange=cargarMsg;
+$('msgTxt').oninput=vistaMsg;
+$('bMsg').onclick=async()=>{
+  const m=msgActual();error('eMsg','');
+  try{pintar(await api('consent_cfg_mensaje',{msg:m.clave,texto:$('msgTxt').value,antes:m.texto},'Guardando mensaje…'));aviso('Mensaje guardado.');}
+  catch(x){error('eMsg',x.message);}
+};
+
+async function iniciar(){
+  try{pintar(await api('consent_cfg_leer',{},'Cargando la configuración…'));}
+  catch(x){error('eGeneral',x.message);}
+}
+if(window.YP_SESION)iniciar();else document.addEventListener('yp-sesion',iniciar,{once:true});
+</script>
+</body>
+</html>

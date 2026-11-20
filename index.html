@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script src="sesion.js" data-pagina="inicio"></script>
 <title>PRUEBA · Inicio del equipo · Yiyi Pash</title><meta name="robots" content="noindex"><script>document.addEventListener('DOMContentLoaded',function(){var d=document.createElement('div');d.textContent='PRUEBA · nada de lo que hagas aquí es real';d.style.cssText='position:sticky;top:0;z-index:99999;background:#b91c1c;color:#fff;text-align:center;font:700 13px/1.4 system-ui,sans-serif;padding:6px 8px';document.body.insertBefore(d,document.body.firstChild);});</script><link rel="icon" type="image/png" sizes="32x32" href="https://yiyipash.com/prueba/icono-32.png"><link rel="icon" type="image/png" sizes="192x192" href="https://yiyipash.com/prueba/icono-192.png"><link rel="apple-touch-icon" href="https://yiyipash.com/prueba/icono-180.png">
 <meta name="robots" content="noindex">
 <meta name="apple-mobile-web-app-title" content="Yiyi Pash">
@@ -27,6 +28,7 @@ h1{font-family:var(--font);font-weight:700;font-size:23px;line-height:1.2;color:
 .m-vent{--c:#dd6a3a;--c2:#ffe0cf}
 .m-cli{--c:#8a4fc7;--c2:#ecdcfb}
 .m-ayu{--c:#2a8f7e;--c2:#cff0e9}
+.m-conf{--c:#4b5a74;--c2:#dde3ee}
 .mod{display:grid;gap:8px}
 .mod h2{margin:10px 0 0;font-size:12.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--c);display:flex;align-items:center;gap:7px}
 .mod h2::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--c)}
@@ -66,16 +68,22 @@ h1{font-family:var(--font);font-weight:700;font-size:23px;line-height:1.2;color:
     <a class="op" id="opFirmar" href="consentimiento/?ver=firmar"><span class="ic" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M5 33c3-3 6 1 9-1s4-4 7-2"/><path class="r" d="M26 6.5l7.5 7.5L20 27.5l-8.5 1 1-8.5z"/><path d="M22.5 10l7.5 7.5"/></svg></span><span><b id="tFirmar">Por firmar</b><small id="sFirmar">Firma con su artista, ya con zonas y material listos</small></span></a>
     <a class="op" href="fichas.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 40 40"><rect class="r" x="5" y="9" width="30" height="24" rx="4"/><path d="M9 22h5l2.5-6 4.5 10 2.5-5H31"/></svg></span><span><b>Fichas del día</b><small>Salud y zonas de cada clienta, para la artista</small></span></a>
   </section>
-  <section class="mod m-vent" aria-labelledby="mV">
+  <section class="mod m-vent" aria-labelledby="mV" data-ver="dueno artista">
     <h2 id="mV">Ventas</h2>
     <a class="op" href="nota/"><span class="ic" aria-hidden="true"><svg viewBox="0 0 40 40"><path class="r" d="M10 5h20v29l-3.3-2.2-3.4 2.2-3.3-2.2-3.4 2.2-3.3-2.2L10 34z"/><path d="M15 13h10M15 18h10M15 23h6"/></svg></span><span><b>Nueva nota</b><small>Productos, servicios o una venta sin consentimiento</small></span></a>
     <a class="op" id="opCobrar" href="nota/?ver=cobrar"><span class="ic" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M10 11l13-6 3.5 6"/><rect class="r" x="5" y="11" width="29" height="22" rx="4"/><path class="w" d="M34 19h-6.5a3.5 3.5 0 0 0 0 7H34z"/><circle cx="28" cy="22.5" r="1.1"/></svg></span><span><b id="tCobrar">Por cobrar</b><small id="sCobrar">Consentimientos y prenotas que aún no tienen nota</small></span></a>
-    <a class="op" href="panel.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 40 40"><rect class="r" x="6" y="8" width="28" height="26" rx="4"/><path d="M6 15h28M13 5v6M27 5v6"/><path d="M14.5 24.5l4 4 7.5-8"/></svg></span><span><b>Notas del día</b><small>Corregir, reenviar o anular notas de hoy</small></span></a>
+    <a class="op" href="panel.html" data-ver="dueno"><span class="ic" aria-hidden="true"><svg viewBox="0 0 40 40"><rect class="r" x="6" y="8" width="28" height="26" rx="4"/><path d="M6 15h28M13 5v6M27 5v6"/><path d="M14.5 24.5l4 4 7.5-8"/></svg></span><span><b>Notas del día</b><small>Corregir, reenviar o anular notas de hoy</small></span></a>
   </section>
-  <section class="mod m-cli" aria-labelledby="mL">
+  <section class="mod m-cli" aria-labelledby="mL" data-ver="dueno artista">
     <h2 id="mL">Clientas</h2>
     <a class="op" href="fichas.html#buscar"><span class="ic" aria-hidden="true"><svg viewBox="0 0 40 40"><path class="r" d="M5 12a3 3 0 0 1 3-3h7l3 3h14a3 3 0 0 1 3 3v15a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z"/><path d="M5 17h30"/><path class="w" d="M20 29s-4-2.4-4-5a2.1 2.1 0 0 1 4-1 2.1 2.1 0 0 1 4 1c0 2.6-4 5-4 5z"/></svg></span><span><b>Expediente</b><small>Busca a una clienta: perforaciones, visitas y fotos</small></span></a>
-    <a class="op" href="clientas.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 40 40"><circle class="r" cx="16" cy="14" r="6"/><path class="r" d="M5 33c0-6 5-10 11-10s11 4 11 10z"/><path class="w" d="M31 16s-4.5-2.7-4.5-5.6a2.3 2.3 0 0 1 4.5-1.1 2.3 2.3 0 0 1 4.5 1.1c0 2.9-4.5 5.6-4.5 5.6z"/></svg></span><span><b>Datos y Pink Club</b><small>Corregir datos, puntos y notas de papel</small></span></a>
+    <a class="op" href="clientas.html" data-ver="dueno"><span class="ic" aria-hidden="true"><svg viewBox="0 0 40 40"><circle class="r" cx="16" cy="14" r="6"/><path class="r" d="M5 33c0-6 5-10 11-10s11 4 11 10z"/><path class="w" d="M31 16s-4.5-2.7-4.5-5.6a2.3 2.3 0 0 1 4.5-1.1 2.3 2.3 0 0 1 4.5 1.1c0 2.9-4.5 5.6-4.5 5.6z"/></svg></span><span><b>Datos y Pink Club</b><small>Corregir datos, puntos y notas de papel</small></span></a>
+  </section>
+  <section class="mod m-conf" aria-labelledby="mF" data-ver="dueno">
+    <h2 id="mF">Configuración</h2>
+    <a class="op" href="config.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 40 40"><circle class="r" cx="20" cy="20" r="8"/><path d="M20 4v6M20 30v6M4 20h6M30 20h6M8.7 8.7l4.2 4.2M27.1 27.1l4.2 4.2M8.7 31.3l4.2-4.2M27.1 12.9l4.2-4.2"/><circle class="w" cx="20" cy="20" r="3"/></svg></span><span><b>Zonas, lugares y mensajes</b><small>Cambiar las listas y los textos sin abrir la hoja</small></span></a>
+    <a class="op" href="perfiles.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 40 40"><circle class="r" cx="14" cy="14" r="5"/><circle class="r" cx="27" cy="15" r="4"/><path class="r" d="M4 32c0-5.5 4.5-9 10-9s10 3.5 10 9z"/><path class="r" d="M22 26c1.5-1.6 3.4-2.5 5.5-2.5 4.6 0 8.5 3.2 8.5 8.5H25"/></svg></span><span><b>Equipo y PIN</b><small>Altas, bajas y reiniciar PIN</small></span></a>
+    <a class="op" href="panel.html?ver=anteriores"><span class="ic" aria-hidden="true"><svg viewBox="0 0 40 40"><rect class="r" x="7" y="9" width="26" height="25" rx="4"/><path d="M7 16h26M14 5v6M26 5v6"/><path d="M20 21v5l3 2"/></svg></span><span><b>Notas anteriores</b><small>Ver y corregir notas de otros días</small></span></a>
   </section>
   <section class="mod m-ayu" aria-labelledby="mA">
     <h2 id="mA">Ayuda</h2>
