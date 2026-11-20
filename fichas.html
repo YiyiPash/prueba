@@ -87,6 +87,12 @@ h1{font-family:var(--font);font-weight:700;font-size:23px;line-height:1.2;color:
 .fila{display:flex;gap:8px;align-items:center}
 .visor{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.85);display:grid;place-items:center;padding:16px}
 .visor img{max-width:100%;max-height:90vh;border-radius:12px}
+/* Editar expediente (solo dueños) */
+.edbar{background:var(--warn-bg);color:var(--warn-fg);border-radius:14px;padding:10px 12px;margin-top:12px;font-size:13.5px;display:flex;flex-direction:column;gap:8px}
+.edbar .fila{flex-wrap:wrap}
+.mini{border:1.5px solid var(--line);background:var(--surface);color:var(--accent);border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap}
+.aviso{background:var(--warn-bg);color:var(--warn-fg);border-radius:12px;padding:10px 12px;font-size:14px}
+.act{font-size:13px;border-left:4px solid var(--warn-fg);background:var(--warn-bg);border-radius:8px;padding:6px 10px;margin-top:6px}
 </style>
 
 <div class="app">
@@ -120,7 +126,7 @@ h1{font-family:var(--font);font-weight:700;font-size:23px;line-height:1.2;color:
 
 <!-- Expediente de una clienta: perforaciones, línea de tiempo y "Anotar visita" -->
 <div class="panel" id="panel" hidden><div class="app">
-  <div class="brand"><button class="btn sec" type="button" id="cerrarPanel">← Volver</button><button class="btn" type="button" id="btnAnotar">+ Anotar visita</button></div>
+  <div class="brand"><button class="btn sec" type="button" id="cerrarPanel">← Volver</button><span class="fila"><button class="btn sec" type="button" id="btnEditar" data-ver="dueno">✏️ Editar</button><button class="btn" type="button" id="btnAnotar">+ Anotar visita</button></span></div>
   <div id="expCont"></div>
   <div class="card" id="formVisita" hidden>
     <b style="font-size:17px">Anotar visita</b>
@@ -137,6 +143,17 @@ h1{font-family:var(--font);font-weight:700;font-size:23px;line-height:1.2;color:
     <p class="err" id="vErr"></p>
     <div class="fila"><button class="btn sec" type="button" id="vCancelar">Cancelar</button><button class="btn" type="button" id="vGuardar" style="flex:1">Guardar visita</button></div>
   </div>
+  <div class="card" id="edAviso" hidden>
+    <b style="font-size:17px">Editar expediente</b>
+    <div class="aviso"><b>⚠️ Vas a cambiar la historia de salud de esta persona.</b> Úsalo para anotar lo que pasó en otras fechas o para corregir un error.
+      Cada cambio te pide confirmar y queda registrado: quién lo hizo, cuándo, qué había antes y qué quedó.
+      Los datos de salud de un consentimiento firmado no se cambian: se agrega una actualización con fecha.</div>
+    <label class="campo" id="edPorBox">¿Quién hace el cambio?<input type="text" id="edPor" autocomplete="off" placeholder="Ej. Yoltic"></label>
+    <label class="campo">Clave de dueños<input type="password" id="edClave" autocomplete="off"></label>
+    <p class="err" id="edErr"></p>
+    <div class="fila"><button class="btn sec" type="button" id="edCancelar">Cancelar</button><button class="btn" type="button" id="edEntrar" style="flex:1">Entiendo, editar</button></div>
+  </div>
+  <div class="card" id="edForm" hidden></div>
 </div></div>
 <div class="visor" id="visor" hidden><img id="visorImg" alt="Foto de evolución"></div>
 
@@ -271,12 +288,13 @@ document.addEventListener('click',e=>{
 const E={id:'',d:null};
 async function abrirExp(id){
   if(DEMO){alert('En la demo no hay expedientes. Ya conectado, aquí ves toda la historia de la clienta.');return;}
-  E.id=id;E.d=null;$('panel').hidden=false;$('formVisita').hidden=true;$('btnAnotar').hidden=false;window.scrollTo(0,0);$('panel').scrollTop=0;
+  if(E.id!==id)ED.clave='';
+  E.id=id;E.d=null;$('panel').hidden=false;$('formVisita').hidden=true;$('btnAnotar').hidden=enEdicion();$('btnEditar').hidden=enEdicion();$('edAviso').hidden=true;$('edForm').hidden=true;window.scrollTo(0,0);$('panel').scrollTop=0;
   $('expCont').innerHTML='<p class="estado">Cargando expediente…</p>';
   try{E.d=await api('consent_expediente',{id});pintarExp();}
   catch(x){$('expCont').innerHTML=`<p class="err">${esc(x.message)}</p>`;}
 }
-$('cerrarPanel').onclick=()=>{$('panel').hidden=true;};
+$('cerrarPanel').onclick=()=>{$('panel').hidden=true;salirEdicion();};
 const fmtF=iso=>iso?new Date(iso+'T12:00').toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'}):'';
 const zonaTxt=p=>p.zona+(p.lado&&p.lado!=='Centro'?' '+p.lado.toLowerCase():'');
 function pintarExp(){
@@ -294,8 +312,10 @@ function pintarExp(){
       +(miedos.length?`<div class="miedo" style="margin-top:6px">😰 Le da miedo: ${esc(miedos.join(', '))}</div>`:'')
       +`<p class="estado">Según su consentimiento del ${esc(fmtF(ult.fecha))}${ult.sangre?' · Sangre '+esc(ult.sangre):''}</p>`;
   }
+  salud+=(d.actualizaciones||[]).map(a=>`<div class="act"><b>Actualización · ${esc(a.campo)}</b> <span class="estado">desde ${esc(fmtF(a.fecha))}${a.por?' · '+esc(a.por):''}</span><div>${esc(a.texto)}</div></div>`).join('')
+    +(enEdicion()?'<div><button class="mini" type="button" data-ed="salud">+ Actualización de salud</button></div>':'');
   const tats=(d.tatuajes||[]).map(x=>`<div class="perfo"><span>🖋️ ${esc(x.zona)}<small>${esc(fmtF(x.fecha))}${x.tatuadora?' · '+esc(x.tatuadora):''} · ${esc([x.dimensiones,x.color,x.tipo].filter(Boolean).join(' · '))}${x.prueba?' · alergia: '+esc(x.prueba):''}${x.no_nota?' · Nota '+esc(x.no_nota):''}</small></span><span class="est ${esc(x.estado)}">${esc(x.estado||'—')}</span></div>`).join('');
-  const perfos=d.perforaciones.map(x=>`<div class="perfo"><span>${esc(zonaTxt(x))}<small>${esc(fmtF(x.fecha))}${x.perforadora?' · '+esc(x.perforadora):''}${x.no_nota?' · Nota '+esc(x.no_nota):''}</small></span><span class="est ${esc(x.estado)}">${esc(x.estado||'—')}</span></div>`).join('')||'<p class="estado">Sin perforaciones registradas.</p>';
+  const perfos=d.perforaciones.map(x=>`<div class="perfo"><span>${esc(zonaTxt(x))}<small>${esc(fmtF(x.fecha))}${x.perforadora?' · '+esc(x.perforadora):''}${x.origen?' · '+esc(x.origen):''}${x.no_nota?' · Nota '+esc(x.no_nota):''}</small>${x.notas?`<small>${esc(x.notas)}</small>`:''}</span><span class="fila"><span class="est ${esc(x.estado)}">${esc(x.estado||'—')}</span>${enEdicion()?`<button class="mini" type="button" data-ed="perfo|${esc(x.id)}">Editar</button>`:''}</span></div>`).join('')||'<p class="estado">Sin perforaciones registradas.</p>';
   // Línea de tiempo: consentimientos y visitas, lo más nuevo arriba
   const todos=[...d.perforaciones,...(d.tatuajes||[]).map(t=>({...t,zona:'Tatuaje en '+t.zona,lado:''}))];
   const zonas=ids=>ids.split(',').map(s=>s.trim()).map(i=>todos.find(x=>x.id===i)).filter(Boolean).map(zonaTxt).join(', ');
@@ -310,6 +330,7 @@ function pintarExp(){
       ${v.obs?`<div>${esc(v.obs)}</div>`:''}
       ${v.estado?`<div class="f">Queda: <span class="est ${esc(v.estado)}">${esc(v.estado)}</span></div>`:''}
       ${v.accion?`<div class="prox">⏰ ${esc(v.accion)} · ${esc(fmtF(v.fecha_accion))}</div>`:''}
+      ${enEdicion()?`<div style="margin-top:6px"><button class="mini" type="button" data-ed="visita|${esc(v.id)}">Editar visita</button></div>`:''}
       ${v.fotos.length?`<div class="thumbs">${v.fotos.map(f=>f.mini?`<img src="${esc(f.mini)}" data-foto="${esc(f.id)}" alt="Foto de evolución">`
         :`<button class="btn sec" type="button" data-foto="${esc(f.id)}" style="width:76px;height:76px;font-size:24px">📷</button>`).join('')}</div>`:''}</div>`})),
   ].sort((a,b)=>a.k<b.k?1:-1);
@@ -319,6 +340,8 @@ function pintarExp(){
         ${p.tipo!=='Titular'&&p.tutor?`<span class="pill menor">Menor · ${esc((p.tutor.parentesco||'tutor').toLowerCase())}: ${esc(p.tutor.nombre)}</span>`:''}
         <span class="pill">WhatsApp …${esc(p.wa4)}</span></div>
       ${salud}</div>
+    ${enEdicion()?`<div class="edbar"><b>✏️ Modo edición · ${esc(ED.por)}</b><span>Todo lo que guardes queda en la bitácora.</span>
+      <div class="fila"><button class="mini" type="button" data-ed="perfoNueva">+ Perforación de otro estudio</button><button class="mini" type="button" data-ed="visitaNueva">+ Visita de otra fecha</button><button class="mini" type="button" data-ed="salir">Terminar</button></div></div>`:''}
     <div class="sec2">Perforaciones</div>${perfos}
     ${tats?`<div class="sec2">Tatuajes</div>${tats}`:''}
     <div class="sec2">Historia</div><div class="tl">${ev.map(x=>x.h).join('')||'<p class="estado">Sin historia.</p>'}</div>`;
@@ -368,6 +391,133 @@ $('vGuardar').onclick=async()=>{
   }catch(x){$('vErr').textContent='No se guardó: '+x.message;}
   finally{b.disabled=false;b.textContent='Guardar visita';}
 };
+
+// ── Editar expediente (solo Luis y Yoltic, 20/11) ──
+// Advertencia + clave de dueños antes de entrar. La clave vive solo en esta pantalla (no se guarda en el celular).
+// Cada cambio pide confirmar y queda en la bitácora del expediente con lo de antes y lo de después.
+const ED={clave:'',por:'',form:null};
+const LADOS=['','Izquierdo','Derecho','Centro'];
+const ESTADOS=['Curando','Sana','Retirada'];
+const enEdicion=()=>!!ED.clave;
+function salirEdicion(){ED.clave='';ED.por='';ED.form=null;$('edAviso').hidden=true;$('edForm').hidden=true;$('btnEditar').hidden=false;$('btnAnotar').hidden=false;if(E.d)pintarExp();}
+$('btnEditar').onclick=()=>{
+  if(!E.d)return;
+  $('formVisita').hidden=true;$('edForm').hidden=true;
+  $('edPorBox').hidden=!!(window.YP_SESION&&window.YP_SESION.nombre);
+  $('edClave').value='';$('edErr').textContent='';
+  $('edAviso').hidden=false;$('btnEditar').hidden=true;$('btnAnotar').hidden=true;
+  $('panel').scrollTop=0;window.scrollTo(0,0);setTimeout(()=>$('edAviso').scrollIntoView({behavior:'smooth',block:'start'}),50);
+};
+$('edCancelar').onclick=salirEdicion;
+$('edEntrar').onclick=async()=>{
+  const clave=$('edClave').value,por=(window.YP_SESION&&window.YP_SESION.nombre)||$('edPor').value.trim();
+  if(!por){$('edErr').textContent='Escribe quién hace el cambio.';$('edPor').focus();return;}
+  if(!clave){$('edErr').textContent='Escribe la clave de dueños.';$('edClave').focus();return;}
+  const b=$('edEntrar');b.disabled=true;b.textContent='Revisando…';$('edErr').textContent='';
+  try{await api('consent_exp_editar',{que:'probar',clave_duenos:clave,por});
+    ED.clave=clave;ED.por=por;$('edClave').value='';$('edAviso').hidden=true;pintarExp();$('panel').scrollTop=0;}
+  catch(x){$('edErr').textContent=x.message;}
+  finally{b.disabled=false;b.textContent='Entiendo, editar';}
+};
+// Formulario de edición: campos = [{k,t:'date'|'time'|'text'|'area'|'sel'|'checks'|'file',l,ops,v,ph,opc}]
+function abrirForm(titulo,campos,guardar){
+  ED.form={campos,guardar,inicial:{}};
+  const html=campos.map(c=>{const id='ef_'+c.k,lbl=`${esc(c.l)}${c.opc?' <span style="font-weight:400">(opcional)</span>':''}`;
+    if(c.t==='area')return `<label class="campo">${lbl}<textarea id="${id}" rows="3" placeholder="${esc(c.ph||'')}">${esc(c.v||'')}</textarea></label>`;
+    if(c.t==='sel')return `<label class="campo">${lbl}<select id="${id}">${c.ops.map(o=>{const [v,t]=Array.isArray(o)?o:[o,o||'—'];return `<option value="${esc(v)}"${String(c.v??'')===String(v)?' selected':''}>${esc(t)}</option>`;}).join('')}</select></label>`;
+    if(c.t==='checks')return `<div class="campo">${lbl}<div class="checks" id="${id}">${c.ops.length?c.ops.map(o=>`<label><input type="checkbox" value="${esc(o.id)}"${(c.v||[]).includes(o.id)?' checked':''}> ${esc(o.t)}</label>`).join(''):'<span class="estado">No hay perforaciones registradas.</span>'}</div></div>`;
+    if(c.t==='file')return `<label class="campo">${lbl}<input type="file" id="${id}" accept="image/*" multiple></label>`;
+    return `<label class="campo">${lbl}<input type="${c.t==='date'?'date':c.t==='time'?'time':'text'}" id="${id}" value="${esc(c.v||'')}"${c.t==='date'?` max="${hoyISO()}"`:''} placeholder="${esc(c.ph||'')}"></label>`;
+  }).join('');
+  $('edForm').innerHTML=`<b style="font-size:17px">${esc(titulo)}</b>${html}<p class="err" id="efErr"></p>
+    <div class="fila"><button class="btn sec" type="button" id="efCancelar">Cancelar</button><button class="btn" type="button" id="efGuardar" style="flex:1">Guardar</button></div>`;
+  campos.forEach(c=>{ED.form.inicial[c.k]=leerCampo(c);});
+  $('efCancelar').onclick=()=>{$('edForm').hidden=true;ED.form=null;};
+  $('efGuardar').onclick=guardarForm;
+  $('edForm').hidden=false;$('edForm').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function leerCampo(c){const el=$('ef_'+c.k);if(!el)return '';
+  if(c.t==='checks')return [...el.querySelectorAll('input:checked')].map(i=>i.value);
+  if(c.t==='file')return [...el.files];
+  return el.value.trim();}
+const etiqueta=(c,v)=>{const o=c.ops.find(o=>(Array.isArray(o)?o[0]:o)===v);return (Array.isArray(o)?o[1]:o)||v||'(vacío)';};
+const mostrar=(c,v)=>c.t==='sel'?etiqueta(c,v):c.t==='date'?(v?fmtF(v):'(vacío)'):c.t==='checks'?(v.length?v.map(i=>(c.ops.find(o=>o.id===i)||{t:i}).t).join(', '):'(ninguna)'):(v||'(vacío)');
+async function guardarForm(){
+  const f=ED.form;if(!f)return;
+  const vals={},cambios=[];
+  f.campos.forEach(c=>{const v=leerCampo(c);vals[c.k]=v;
+    if(c.t==='file'){if(v.length)cambios.push(`${c.l}: ${v.length} foto(s)`);return;}
+    if(f.nuevo?(v&&v.length):JSON.stringify(v)!==JSON.stringify(f.inicial[c.k]))cambios.push(f.nuevo?`${c.l}: ${mostrar(c,v)}`:`${c.l}: ${mostrar(c,f.inicial[c.k])} → ${mostrar(c,v)}`);});
+  if(!cambios.length){$('efErr').textContent='No cambiaste nada.';return;}
+  if(!confirm('¿Seguro? Esto queda guardado en el expediente y en la bitácora:\n\n'+cambios.join('\n')))return;
+  const b=$('efGuardar');b.disabled=true;b.textContent='Guardando…';$('efErr').textContent='';
+  try{await f.guardar(vals);$('edForm').hidden=true;ED.form=null;}
+  catch(x){$('efErr').textContent='No se guardó: '+x.message;if(/clave/i.test(x.message)&&/incorrecta|intentos/i.test(x.message))ED.clave='';}
+  finally{b.disabled=false;b.textContent='Guardar';}
+}
+async function edApi(que,datos){
+  const r=await api('consent_exp_editar',Object.assign({que,clave_duenos:ED.clave,por:ED.por,id_clienta:E.id},datos));
+  if(r.expediente){E.d=r.expediente;pintarExp();}
+  return r;
+}
+const opsPerfos=()=>[...E.d.perforaciones,...(E.d.tatuajes||[]).map(t=>({...t,zona:'Tatuaje en '+t.zona,lado:''}))].map(x=>({id:x.id,t:zonaTxt(x)+' ('+fmtF(x.fecha)+')'}));
+function edPerfoNueva(){
+  abrirForm('Perforación de otro estudio',[
+    {k:'zona',t:'text',l:'Zona',ph:'Ej. Helix'},{k:'lado',t:'sel',l:'Lado',ops:LADOS},
+    {k:'fecha',t:'date',l:'¿Cuándo se la hizo? (aproximado está bien)'},{k:'estudio',t:'text',l:'¿Dónde?',ph:'Ej. Estudio en CDMX',opc:true},
+    {k:'estado',t:'sel',l:'¿Cómo está hoy?',ops:ESTADOS,v:'Curando'},{k:'notas',t:'area',l:'Notas',ph:'Ej. Llegó con pieza de mala calidad',opc:true}],
+    v=>edApi('perfo_nueva',v));
+  ED.form.nuevo=true;
+}
+function edPerfo(id){
+  const x=E.d.perforaciones.find(p=>p.id===id);if(!x)return;
+  abrirForm('Editar perforación · '+zonaTxt(x),[
+    {k:'fecha',t:'date',l:'Fecha',v:x.fecha},{k:'zona',t:'text',l:'Zona',v:x.zona},{k:'lado',t:'sel',l:'Lado',ops:LADOS,v:x.lado},
+    {k:'estado',t:'sel',l:'Estado',ops:ESTADOS,v:x.estado},{k:'notas',t:'area',l:'Notas',v:x.notas,opc:true}],
+    v=>edApi('perfo_editar',Object.assign({id},v)));
+  ED.form.nuevo=false;
+}
+function edVisitaNueva(){
+  abrirForm('Visita de otra fecha',[
+    {k:'fecha',t:'date',l:'Fecha de la visita'},{k:'hora',t:'time',l:'Hora',opc:true},
+    {k:'tipo',t:'sel',l:'Tipo de visita',ops:E.d.tipos,v:E.d.tipos[0]},{k:'perfos',t:'checks',l:'¿Qué se revisó?',ops:opsPerfos(),v:[]},
+    {k:'obs',t:'area',l:'¿Qué se vio o qué se hizo?',ph:'Ej. Se cambió la pieza por titanio'},
+    {k:'estado',t:'sel',l:'¿Cómo quedó?',ops:[['','No cambia'],...ESTADOS.map(e=>[e,e])],v:''},
+    {k:'fotos',t:'file',l:'Fotos de ese día',opc:true}],
+    async v=>{const fotos=v.fotos;delete v.fotos;
+      const r=await edApi('visita_nueva',Object.assign({atiende:{id:'',alias:ED.por}},v));
+      for(let i=0;i<fotos.length;i++){$('efGuardar').textContent=`Subiendo foto ${i+1} de ${fotos.length}…`;
+        await api('consent_foto',{id_visita:r.id_visita,foto:await reducir(fotos[i])});}
+      if(fotos.length)await abrirExp(E.id);});
+  ED.form.nuevo=true;
+}
+function edVisita(id){
+  const v=E.d.visitas.find(x=>x.id===id);if(!v)return;
+  const ids=String(v.id_perfos||'').split(',').concat(String(v.perfos||'').split(',')).map(s=>s.trim()).filter(Boolean);
+  const tipos=E.d.tipos.includes(v.tipo)?E.d.tipos:[v.tipo,...E.d.tipos];
+  abrirForm('Editar visita · '+fmtF(v.fecha),[
+    {k:'fecha',t:'date',l:'Fecha',v:v.fecha},{k:'tipo',t:'sel',l:'Tipo de visita',ops:tipos,v:v.tipo},
+    {k:'perfos',t:'checks',l:'¿Qué se revisó?',ops:opsPerfos(),v:[...new Set(ids)]},
+    {k:'obs',t:'area',l:'Observaciones',v:v.obs},
+    {k:'estado',t:'sel',l:'¿Cómo quedó?',ops:[['','Sin dato'],...ESTADOS.map(e=>[e,e])],v:v.estado}],
+    x=>edApi('visita_editar',Object.assign({id},x)));
+  ED.form.nuevo=false;
+}
+function edSalud(){
+  const ult=E.d.consentimientos[0];
+  abrirForm('Actualización de salud',[
+    {k:'campo',t:'sel',l:'¿Qué dato?',ops:['Alergias','Enfermedades','Condiciones','Medicamentos','Tipo de sangre','Otro'],v:'Alergias'},
+    {k:'fecha',t:'date',l:'¿Desde cuándo?',v:hoyISO()},
+    {k:'texto',t:'area',l:'Actualización',ph:'Ej. Ahora es alérgico a la penicilina'}],
+    v=>edApi('salud_nueva',Object.assign({id_consent:ult?ult.id:''},v)));
+  ED.form.nuevo=true;
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-ed]');if(!b||!enEdicion())return;
+  const [k,id]=b.dataset.ed.split('|');
+  if(k==='perfo')edPerfo(id);else if(k==='visita')edVisita(id);else if(k==='perfoNueva')edPerfoNueva();
+  else if(k==='visitaNueva')edVisitaNueva();else if(k==='salud')edSalud();else if(k==='salir')salirEdicion();
+});
 
 pintar();cargar();
 if(!DEMO&&store.get('yp_pink_clave'))cargarLista().catch(()=>{});
