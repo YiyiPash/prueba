@@ -1,20 +1,21 @@
-// Sesión del equipo (fase 2, aprobada por Luis el 20/11/2026). Va en TODAS las páginas del equipo:
+// Sesión del equipo (fase 2; rehecha el 20/11/2026 con las observaciones de Luis). Va en TODAS las páginas del equipo:
 //   <script src="sesion.js" data-pagina="inicio"></script>   (en consentimiento/ y nota/: src="../sesion.js")
-// · Aparato nuevo → contraseña general (la clave del equipo de siempre; la saben Luis y Yoltic).
-// · "¿Quién eres?" → PIN de 6 dígitos. La primera vez cada quien crea su PIN, con Luis o Yoltic presentes.
-// · Cada perfil ve sus módulos: los elementos con data-ver="dueno artista" solo salen para esos perfiles.
-// · iPad del estudio: tras 1 hora sin usarse vuelve a "¿Quién eres?" (lo que estaba a medias no se pierde).
-// · Toda petición al Apps Script lleva la sesión; el servidor la usa para "quién hizo" y lo que es solo de dueños.
+// · Se entra con Usuario (luis, yiyi, kat, ipad…) + PIN de 6 números y "Entrar". Sin botones de personas ni teclado.
+// · La clave maestra del estudio solo se pide al crear un PIN o en un aparato nuevo; al escribirla, el aparato queda registrado.
+// · Cada perfil ve los módulos de su tipo de acceso: data-ver="nota panel" sale si tiene alguno; "dueno" = solo dueños.
+// · Sin usarse: el iPad se cierra a la hora; los demás perfiles, a las 6 horas. Lo que estaba a medias no se pierde.
+// · Al entrar otra persona, siempre llega al Inicio. "Cambiar de persona" solo está en el Inicio, y pregunta antes.
+// · Toda petición al Apps Script lleva la sesión; el servidor revisa que valga y que el perfil tenga acceso.
+// · Casita: los elementos con class="yp-casita" quedan fijos arriba (los estilos van aquí para que sean iguales en todas).
 (function () {
   'use strict';
   var AS_URL = 'https://script.google.com/macros/s/AKfycbwOhVk8lowZwedDv-J0wOCparRSL1MZu9ybJXJ6oru5Br87eLRgtO6Ny10sv947ciuv/exec';
   var yo = document.currentScript, PAG = (yo && yo.getAttribute('data-pagina')) || 'inicio';
   var INICIO = PAG === 'consentimiento' || PAG === 'nota' ? '../' : './';
-  // Qué perfiles entran a cada página
-  var PAGINAS = { inicio: 'dueno artista ipad', ayuda: 'dueno artista ipad', consentimiento: 'dueno artista ipad', fichas: 'dueno artista ipad',
-    nota: 'dueno artista', panel: 'dueno', clientas: 'dueno', config: 'dueno', perfiles: 'dueno' };
-  var UNA_HORA = 60 * 60 * 1000;
-  var K = { clave: 'yp_pink_clave', sesion: 'ypp_sesion', aparato: 'ypp_aparato', act: 'ypp_actividad', lista: 'ypp_perfiles' };
+  // Qué módulo pide cada página ('*' = todos; 'dueno' = solo dueños)
+  var PAGINAS = { inicio: '*', ayuda: '*', consentimiento: 'consentimiento', fichas: 'fichas', nota: 'nota', panel: 'panel', clientas: 'clientas', config: 'config', perfiles: 'dueno' };
+  var HORA = 60 * 60 * 1000, LIMITE = { ipad: HORA, otro: 6 * HORA };
+  var K = { clave: 'yp_pink_clave', sesion: 'ypp_sesion', act: 'ypp_actividad' };
   // Fuera de yiyipash.com (una copia en la computadora) no hay servidor: se comporta como dueño, sin pedir nada
   var SIN_SERVIDOR = !/(\.github\.io|(^|\.)yiyipash\.com|^localhost|^127\.0\.0\.1)$/.test(location.hostname);
 
@@ -23,16 +24,21 @@
     set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
     del: function (k) { try { localStorage.removeItem(k); } catch (e) {} },
   };
+  try { localStorage.removeItem('ypp_perfiles'); localStorage.removeItem('ypp_aparato'); } catch (e) {}   // de la primera versión
   function leerSesion() {
     try {
       var s = JSON.parse(ls.get(K.sesion) || 'null');
-      if (!s || !s.token) return null;
+      if (!s || !s.token || !s.modulos) return null;          // sin "modulos" = sesión de la primera versión: se vuelve a entrar
       var exp = Number(String(s.token).split('.')[1]) || 0;
       return exp > Date.now() ? s : null;
     } catch (e) { return null; }
   }
-  var esIpad = function () { return ls.get(K.aparato) === 'ipad'; };
-  var permitido = function (s, lista) { return !!s && (' ' + lista + ' ').indexOf(' ' + s.clave_rol + ' ') >= 0; };
+  var limiteDe = function (s) { return s && s.clave_rol === 'ipad' ? LIMITE.ipad : LIMITE.otro; };
+  function puede(s, lista) {
+    if (!s) return false;
+    if (s.clave_rol === 'dueno') return true;
+    return String(lista || '').split(/\s+/).some(function (m) { return m === '*' || (m !== 'dueno' && s.modulos.indexOf(m) >= 0); });
+  }
 
   // ── Toda petición al Apps Script lleva la sesión ─────────────────────
   var fetch0 = window.fetch.bind(window);
@@ -48,12 +54,12 @@
   };
   function api(action, data) {
     var body = Object.assign({ action: action, clave: ls.get(K.clave) || '' }, data || {});
-    return fetch(AS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(body), redirect: 'follow' })
+    return fetch0(AS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(body), redirect: 'follow' })
       .then(function (r) { return r.json(); })
       .then(function (j) { if (!j.ok) throw new Error(j.error || 'Error del servidor'); return j.data; });
   }
 
-  // ── Estilos (todo con prefijo ys-) ───────────────────────────────────
+  // ── Estilos (todo con prefijo ys- / yp-) ─────────────────────────────
   var css = document.createElement('style');
   css.textContent = [
     '.ys-capa{position:fixed;inset:0;z-index:2147483000;background:#ffe1ee;color:#3b1f2e;font-family:Montserrat,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.45;overflow:auto;',
@@ -61,28 +67,24 @@
     '.ys-in{max-width:420px;margin:0 auto;display:grid;gap:12px}',
     '.ys-capa h1{margin:4px 0 0;font-size:23px;font-weight:700;color:#b82a6c}',
     '.ys-hint{margin:0;color:#7d5468;font-size:13.5px}',
-    '.ys-card{background:#fff;border:1.5px solid #f8c4dc;border-radius:16px;padding:14px;display:grid;gap:10px}',
+    '.ys-aviso{margin:0;background:#fff;border:1.5px solid #f8c4dc;border-radius:12px;padding:9px 12px;font-size:13.5px;font-weight:600;color:#7d5468}',
+    '.ys-card{background:#fff;border:1.5px solid #f8c4dc;border-radius:16px;padding:14px;display:grid;gap:12px}',
     '.ys-capa label{display:grid;gap:5px;font-size:13px;font-weight:600}',
-    '.ys-capa input{font:inherit;padding:11px 12px;border:1.5px solid #f8c4dc;border-radius:10px;background:#fff7fb;color:#3b1f2e;width:100%;box-sizing:border-box}',
-    '.ys-btn{border:none;border-radius:999px;background:linear-gradient(135deg,#d6347f,#ff74af);color:#fff;font:inherit;font-weight:700;font-size:15px;padding:12px 14px;cursor:pointer}',
+    '.ys-capa label small{font-weight:400;color:#7d5468}',
+    '.ys-capa input{font:inherit;font-size:16px;padding:11px 12px;border:1.5px solid #f8c4dc;border-radius:10px;background:#fff7fb;color:#3b1f2e;width:100%;box-sizing:border-box}',
+    '.ys-capa input.ys-pin:not(:placeholder-shown){letter-spacing:6px;font-variant-numeric:tabular-nums}',
+    '.ys-btn{border:none;border-radius:999px;background:linear-gradient(135deg,#d6347f,#ff74af);color:#fff;font:inherit;font-weight:700;font-size:15px;padding:12px 14px;cursor:pointer;text-align:center;text-decoration:none}',
     '.ys-btn.sec{background:#fff;color:#d6347f;border:1.5px solid #f8c4dc}',
     '.ys-btn:disabled{opacity:.6}',
-    '.ys-who{display:grid;gap:8px}',
-    '.ys-who button{display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid #f8c4dc;border-radius:16px;padding:11px 12px;font:inherit;color:#3b1f2e;cursor:pointer;text-align:left}',
-    '.ys-who button[aria-pressed="true"]{border-color:#d6347f;box-shadow:0 0 0 2px #ff74af inset}',
-    '.ys-av{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#fff;background:#d6347f}',
-    '.ys-who b{display:block;font-size:16px}.ys-who small{display:block;color:#7d5468;font-size:12.5px}',
-    '.ys-pin{display:flex;justify-content:center;gap:11px;margin:2px 0}',
-    '.ys-pin i{width:15px;height:15px;border-radius:50%;border:2px solid #d6347f;display:block}.ys-pin i.on{background:#d6347f}',
-    '.ys-keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}',
-    '.ys-keys button{font:inherit;font-size:22px;font-weight:600;padding:11px 0;border-radius:14px;border:1.5px solid #f8c4dc;background:#fff;color:#3b1f2e;cursor:pointer;font-variant-numeric:tabular-nums}',
-    '.ys-keys .k0{grid-column:2}',
-    '.ys-err{color:#b4232b;font-size:13.5px;margin:0;text-align:center;min-height:1.2em}',
-    '.ys-capa button:focus-visible{outline:3px solid #ff74af;outline-offset:2px}',
-    '.ys-barra{display:flex;align-items:center;justify-content:space-between;gap:8px;max-width:520px;margin:0 auto 8px;font-family:Montserrat,system-ui,sans-serif;font-size:12.5px;color:#7d5468}',
+    '.ys-err{color:#b4232b;font-size:13.5px;margin:0;min-height:1.2em}',
+    '.ys-capa button:focus-visible,.ys-capa a:focus-visible,.ys-capa input:focus-visible{outline:3px solid #ff74af;outline-offset:2px}',
+    '.ys-quien{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-family:Montserrat,system-ui,sans-serif;font-size:13px;color:#7d5468}',
     '.ys-chip{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #f8c4dc;border-radius:999px;padding:4px 10px;font-weight:600;color:#3b1f2e}',
     '.ys-chip::before{content:"";width:8px;height:8px;border-radius:50%;background:#d6347f}',
-    '.ys-link{background:none;border:none;font:inherit;font-size:12.5px;font-weight:700;color:#d6347f;cursor:pointer;padding:6px 4px}',
+    '.ys-link{background:none;border:none;font:inherit;font-size:13px;font-weight:700;color:#d6347f;cursor:pointer;padding:6px 4px}',
+    '.yp-casita{position:sticky;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:60;display:inline-flex;align-items:center;gap:5px;width:max-content;align-self:flex-start;',
+    'font:600 13px Montserrat,system-ui,sans-serif;color:#d6347f;background:#fff;border:1.5px solid #f8c4dc;border-radius:999px;padding:6px 13px;text-decoration:none;box-shadow:0 2px 0 #f8c4dc;margin:4px 0}',
+    '.yp-casita:focus-visible{outline:3px solid #ff74af;outline-offset:2px}',
     '[data-ver].ys-oculto{display:none!important}',
   ].join('');
   document.head.appendChild(css);
@@ -95,121 +97,116 @@
     try { document.documentElement.style.overflow = 'hidden'; } catch (e) {}
     return capa;
   }
+  var capaAbierta = function () { return !!(capa && capa.parentNode); };
   function cerrarCapa() { if (capa && capa.parentNode) capa.parentNode.removeChild(capa); try { document.documentElement.style.overflow = ''; } catch (e) {} }
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var q = function (sel) { return capa.querySelector(sel); };
+  var soloNumeros = function (el) { el.addEventListener('input', function () { var v = el.value.replace(/\D/g, '').slice(0, 6); if (v !== el.value) el.value = v; }); };
+  var pinFacil = function (p) { return /^(\d)\1{5}$/.test(p) || '0123456789'.indexOf(p) >= 0 || '9876543210'.indexOf(p) >= 0; };
+  var errClave = function (m) { return /Clave de equipo|clave maestra/i.test(m); };
 
-  // ── 1. Aparato nuevo ─────────────────────────────────────────────────
-  function pedirClave(msg) {
-    abrirCapa('<h1>Registrar este aparato</h1><p class="ys-hint">Se hace una sola vez en cada celular o iPad.</p>' +
-      '<form class="ys-card" id="ysF"><label>Contraseña general<input type="password" id="ysC" autocomplete="off" placeholder="La saben Luis y Yoltic"></label>' +
-      '<button class="ys-btn" id="ysB">Registrar este aparato</button><p class="ys-err" id="ysE">' + esc(msg || '') + '</p></form>');
+  // ── Entrar: usuario + PIN ────────────────────────────────────────────
+  var paso = { usuario: '', pin: '', clave: '', aviso: '' };
+  function pantallaEntrar(aviso, err) {
+    paso.aviso = aviso || '';
+    var nuevo = !ls.get(K.clave);
+    abrirCapa((paso.aviso ? '<p class="ys-aviso">' + esc(paso.aviso) + '</p>' : '') +
+      '<h1>Entrar</h1><form class="ys-card" id="ysF" autocomplete="off">' +
+      '<label>Usuario<input type="text" id="ysU" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Ej. luis" value="' + esc(paso.usuario) + '"></label>' +
+      '<label>PIN<input type="password" id="ysP" class="ys-pin" inputmode="numeric" placeholder="6 números"></label>' +
+      (nuevo ? '<label>Clave maestra del estudio <small>Este aparato es nuevo: la escribe Luis o Yoltic una sola vez.</small><input type="password" id="ysC" value="' + esc(paso.clave) + '"></label>' : '') +
+      '<button class="ys-btn" id="ysB">Entrar</button><p class="ys-err" id="ysE" role="alert">' + esc(err || '') + '</p></form>');
+    soloNumeros(q('#ysP'));
+    (paso.usuario ? q('#ysP') : q('#ysU')).focus();
     q('#ysF').onsubmit = function (e) {
       e.preventDefault();
-      var c = q('#ysC').value.trim(); if (!c) return;
-      q('#ysB').disabled = true; q('#ysE').textContent = '';
-      api('pink_validar_clave', { clave: c }).then(function () { ls.set(K.clave, c); quienEres(); })
-        .catch(function (x) { q('#ysB').disabled = false; q('#ysE').textContent = /Clave de equipo/i.test(x.message) ? 'Esa contraseña no es correcta.' : 'No se pudo revisar. Revisa tu conexión.'; });
+      var u = q('#ysU').value.trim(), p = q('#ysP').value, c = q('#ysC') ? q('#ysC').value : '';
+      if (!u) { q('#ysE').textContent = 'Escribe tu usuario.'; return q('#ysU').focus(); }
+      if (!/^\d{6}$/.test(p)) { q('#ysE').textContent = 'El PIN son 6 números.'; return q('#ysP').focus(); }
+      if (q('#ysC') && !c) { q('#ysE').textContent = 'Falta la clave maestra del estudio.'; return q('#ysC').focus(); }
+      paso.usuario = u; paso.pin = p; paso.clave = c;
+      q('#ysB').disabled = true; q('#ysB').textContent = 'Revisando…'; q('#ysE').textContent = '';
+      api('consent_perf_entrar', { usuario: u, pin: p, clave: c || ls.get(K.clave) || '' }).then(function (r) {
+        if (r.crear) return primeraVez(r.usuario);
+        entro(r);
+      }).catch(function (x) {
+        if (errClave(x.message)) { if (!c) ls.del(K.clave); return pantallaEntrar(paso.aviso, c ? 'La clave maestra no es correcta.' : 'La clave de este aparato cambió. Escribe la clave maestra.'); }
+        q('#ysB').disabled = false; q('#ysB').textContent = 'Entrar';
+        q('#ysE').textContent = /Failed to fetch|NetworkError|Load failed/i.test(x.message) ? 'No hay conexión. Revisa el internet e intenta otra vez.' : x.message;
+        if (/PIN/.test(x.message)) { q('#ysP').value = ''; q('#ysP').focus(); }
+      });
     };
   }
-
-  // ── 2. ¿Quién eres? ──────────────────────────────────────────────────
-  var estado = { perfiles: [], elegido: null, pin: '', pin1: '', aviso: '' };
-  function quienEres(aviso) {
-    estado.elegido = null; estado.pin = ''; estado.pin1 = ''; estado.aviso = aviso || '';
-    try { estado.perfiles = JSON.parse(ls.get(K.lista) || '[]'); } catch (e) { estado.perfiles = []; }
-    pintarQuien();
-    api('consent_perf_lista').then(function (d) { estado.perfiles = d.perfiles || []; ls.set(K.lista, JSON.stringify(estado.perfiles)); if (!estado.elegido) pintarQuien(); })
-      .catch(function (x) {
-        if (/Clave de equipo/i.test(x.message)) { ls.del(K.clave); return pedirClave('La contraseña del aparato cambió. Escríbela otra vez.'); }
-        if (!estado.perfiles.length) { var e = capa && capa.querySelector('#ysE'); if (e) e.textContent = 'No se pudo cargar la lista: ' + x.message; }
-      });
-  }
-  var ROL_TXT = { 'Dueño': 'Dueña / dueño', 'Artista': 'Artista', 'iPad': 'iPad del estudio' };
-  function pintarQuien() {
-    var p = estado.elegido, creando = p && !p.tiene_pin, paso2 = creando && estado.pin1;
-    var titulo = !p ? 'Toca tu nombre.' : creando ? (paso2 ? 'Escríbelo otra vez para confirmar' : 'Hola, ' + p.nombre + '. Crea tu PIN de 6 números') : 'Hola, ' + p.nombre + '. Escribe tu PIN';
-    abrirCapa((estado.aviso ? '<p class="ys-hint" style="text-align:center;font-weight:600">' + esc(estado.aviso) + '</p>' : '') +
-      '<h1>¿Quién eres?</h1><div class="ys-who">' + estado.perfiles.map(function (x, i) {
-        return '<button type="button" data-q="' + i + '" aria-pressed="' + (p && p.id === x.id) + '"><span class="ys-av">' + esc(x.nombre.charAt(0).toUpperCase()) + '</span><span><b>' + esc(x.nombre) +
-          '</b><small>' + esc(ROL_TXT[x.rol] || x.rol) + (x.tiene_pin ? '' : ' · primera vez') + '</small></span></button>';
-      }).join('') + '</div>' +
-      (p ? '<div class="ys-card"><p class="ys-hint" style="text-align:center">' + esc(titulo) + '</p>' +
-        '<div class="ys-pin" aria-label="PIN, ' + estado.pin.length + ' de 6">' + [0, 1, 2, 3, 4, 5].map(function (i) { return '<i class="' + (i < estado.pin.length ? 'on' : '') + '"></i>'; }).join('') + '</div>' +
-        '<div class="ys-keys">' + [1, 2, 3, 4, 5, 6, 7, 8, 9].map(function (n) { return '<button type="button" data-n="' + n + '">' + n + '</button>'; }).join('') +
-        '<button type="button" data-n="0" class="k0">0</button><button type="button" data-n="x" aria-label="Borrar">⌫</button></div>' +
-        (paso2 ? '<label>Contraseña general (la escribe Luis o Yoltic)<input type="password" id="ysG" autocomplete="off"></label><button class="ys-btn" type="button" id="ysCrear">Crear mi PIN</button>' : '') +
-        '</div>' : '') + '<p class="ys-err" id="ysE"></p>');
-    capa.querySelectorAll('[data-q]').forEach(function (b) { b.onclick = function () { estado.elegido = estado.perfiles[+b.getAttribute('data-q')]; estado.pin = ''; estado.pin1 = ''; pintarQuien(); }; });
-    capa.querySelectorAll('[data-n]').forEach(function (b) { b.onclick = function () { tecla(b.getAttribute('data-n')); }; });
-    var crear = q('#ysCrear'); if (crear) crear.onclick = crearPin;
-  }
-  function tecla(n) {
-    var p = estado.elegido; if (!p || estado.ocupado) return;
-    if (n === 'x') estado.pin = estado.pin.slice(0, -1); else if (estado.pin.length < 6) estado.pin += n;
-    if (estado.pin.length < 6) return pintarQuien();
-    if (!p.tiene_pin) {
-      if (!estado.pin1) { estado.pin1 = estado.pin; estado.pin = ''; return pintarQuien(); }
-      if (estado.pin1 !== estado.pin) { estado.pin1 = ''; estado.pin = ''; pintarQuien(); q('#ysE').textContent = 'Los dos PIN no son iguales. Empieza otra vez.'; return; }
-      pintarQuien(); var g = q('#ysG'); if (g) g.focus(); return;
-    }
-    estado.ocupado = true; pintarQuien();
-    api('consent_perf_entrar', { id: p.id, pin: estado.pin }).then(entro).catch(function (x) { estado.ocupado = false; estado.pin = ''; pintarQuien(); q('#ysE').textContent = x.message; });
-  }
-  function crearPin() {
-    var p = estado.elegido, g = q('#ysG').value;
-    if (!g) { q('#ysE').textContent = 'Falta la contraseña general.'; return; }
-    q('#ysCrear').disabled = true;
-    api('consent_perf_crear_pin', { id: p.id, pin: estado.pin, clave_general: g }).then(entro)
-      .catch(function (x) { q('#ysCrear').disabled = false; q('#ysE').textContent = x.message; if (/fácil|6 números/.test(x.message)) { estado.pin1 = ''; estado.pin = ''; pintarQuien(); q('#ysE').textContent = x.message; } });
+  // Primera vez (o PIN reiniciado): el PIN que escribió es el nuevo; se confirma y Luis o Yoltic ponen la clave maestra
+  function primeraVez(usuario) {
+    if (pinFacil(paso.pin)) { paso.pin = ''; return pantallaEntrar(paso.aviso, 'Hola, ' + usuario + '. Es tu primera vez: ese PIN es muy fácil de adivinar. Elige otro.'); }
+    var yaClave = !!paso.clave;          // aparato nuevo: ya la escribieron en la pantalla anterior
+    abrirCapa('<h1>Hola, ' + esc(usuario) + '</h1><p class="ys-hint">Es tu primera vez (o te reiniciaron el PIN). El PIN que escribiste será el tuyo.</p>' +
+      '<form class="ys-card" id="ysF" autocomplete="off">' +
+      '<label>Escribe tu PIN otra vez<input type="password" id="ysP2" class="ys-pin" inputmode="numeric" placeholder="6 números"></label>' +
+      (yaClave ? '' : '<label>Clave maestra del estudio <small>La escribe Luis o Yoltic.</small><input type="password" id="ysC"></label>') +
+      '<button class="ys-btn" id="ysB">Crear mi PIN y entrar</button><button class="ys-btn sec" type="button" id="ysV">Volver</button>' +
+      '<p class="ys-err" id="ysE" role="alert"></p></form>');
+    soloNumeros(q('#ysP2')); q('#ysP2').focus();
+    q('#ysV').onclick = function () { paso.pin = ''; pantallaEntrar(paso.aviso); };
+    q('#ysF').onsubmit = function (e) {
+      e.preventDefault();
+      var p2 = q('#ysP2').value, c = yaClave ? paso.clave : q('#ysC').value;
+      if (p2 !== paso.pin) { paso.pin = ''; return pantallaEntrar(paso.aviso, 'Los dos PIN no son iguales. Empieza otra vez.'); }
+      if (!c) { q('#ysE').textContent = 'Falta la clave maestra del estudio.'; return q('#ysC').focus(); }
+      q('#ysB').disabled = true; q('#ysB').textContent = 'Creando…'; q('#ysE').textContent = '';
+      api('consent_perf_crear_pin', { usuario: usuario, pin: paso.pin, clave_general: c, clave: c }).then(function (s) { paso.clave = c; entro(s); })
+        .catch(function (x) { q('#ysB').disabled = false; q('#ysB').textContent = 'Crear mi PIN y entrar'; q('#ysE').textContent = errClave(x.message) ? 'La clave maestra no es correcta.' : x.message; });
+    };
   }
   function entro(s) {
-    estado.ocupado = false;
+    if (paso.clave) ls.set(K.clave, paso.clave);           // el aparato queda registrado
     ls.set(K.sesion, JSON.stringify(s));
     ls.set(K.act, String(Date.now()));
-    if (s.clave_rol === 'ipad') { ls.set(K.aparato, 'ipad'); ls.del('ypp_elaboro_id'); ls.del('ypp_elaboro_alias'); }
-    else if (s.colab) { ls.set('ypp_elaboro_id', s.colab.id); ls.set('ypp_elaboro_alias', s.colab.alias); }
-    // Si la página abrió sin nadie, se recarga para que todo (Elaboró, quién atiende) salga con esta persona.
-    // Si solo se cerró por la hora del iPad, no se recarga: lo que estaba a medias sigue ahí.
-    if (!sesionAlAbrir || sesionAlAbrir.id !== s.id) return location.reload();
-    sesionAlAbrir = s;
-    cerrarCapa(); aplicar(s);
+    if (s.colab && s.clave_rol !== 'ipad') { ls.set('ypp_elaboro_id', s.colab.id); ls.set('ypp_elaboro_alias', s.colab.alias); }
+    else { ls.del('ypp_elaboro_id'); ls.del('ypp_elaboro_alias'); }
+    paso = { usuario: '', pin: '', clave: '', aviso: '' };
+    // La misma persona (se le cerró por tiempo): sigue donde estaba. Otra persona: siempre al Inicio.
+    if (sesionAlAbrir && sesionAlAbrir.id === s.id) { sesionAlAbrir = s; cerrarCapa(); return aplicar(s); }
+    if (PAG === 'inicio') return location.reload();
+    location.replace(INICIO);
   }
 
-  // ── 3. Permisos y barra de arriba ────────────────────────────────────
+  // ── Permisos y "quién está" ──────────────────────────────────────────
   function aplicar(s) {
     window.YP_SESION = s;
-    document.querySelectorAll('[data-ver]').forEach(function (el) { el.classList.toggle('ys-oculto', !permitido(s, el.getAttribute('data-ver'))); });
-    if (!permitido(s, PAGINAS[PAG] || 'dueno')) {
-      abrirCapa('<h1>Esta parte no es para tu perfil</h1><p class="ys-hint">Entraste como ' + esc(s.nombre) + '. Pide a Luis o Yoltic que lo hagan, o entra con otra persona.</p>' +
-        '<a class="ys-btn" style="text-align:center;text-decoration:none" href="' + INICIO + '">Ir al Inicio</a><button class="ys-btn sec" type="button" id="ysOtra">Entrar con otra persona</button>');
-      q('#ysOtra').onclick = function () { cerrar(''); };
+    document.querySelectorAll('[data-ver]').forEach(function (el) { el.classList.toggle('ys-oculto', !puede(s, el.getAttribute('data-ver'))); });
+    if (!puede(s, PAGINAS[PAG] || 'dueno')) {
+      abrirCapa('<h1>Tu perfil no tiene acceso a esta parte</h1><p class="ys-hint">Entraste como ' + esc(s.usuario || s.nombre) + '. Si lo necesitas, pídele a Luis o Yoltic que te lo den.</p>' +
+        '<a class="ys-btn" href="' + INICIO + '">Ir al Inicio</a>');
       return;
     }
-    var barra = document.getElementById('ysBarra');
-    if (!barra) { barra = document.createElement('div'); barra.id = 'ysBarra'; barra.className = 'ys-barra'; document.body.insertBefore(barra, document.body.firstChild); }
-    barra.innerHTML = '<span class="ys-chip">' + esc(s.nombre) + ' · ' + esc(ROL_TXT[s.rol] || s.rol) + '</span><span>' +
-      (esIpad() && s.clave_rol === 'dueno' ? '<button class="ys-link" type="button" id="ysNoIpad" title="Este aparato deja de cerrarse solo a la hora">Quitar modo iPad</button>' : '') +
-      '<button class="ys-link" type="button" id="ysCambiar">Cambiar de persona</button></span>';
-    document.getElementById('ysCambiar').onclick = function () { cerrar(''); };
-    var noIpad = document.getElementById('ysNoIpad');
-    if (noIpad) noIpad.onclick = function () { ls.del(K.aparato); aplicar(s); };
+    if (PAG === 'inicio') pintarQuien(s);
     try { document.dispatchEvent(new CustomEvent('yp-sesion', { detail: s })); } catch (e) {}
+  }
+  var ROL_TXT = { 'Dueño': 'Dueño', 'iPad': 'iPad del estudio' };
+  function pintarQuien(s) {
+    var sal = document.getElementById('saludo');
+    if (sal) sal.textContent = 'Hola, ' + (s.usuario || s.nombre);
+    var box = document.getElementById('ysQuien');
+    if (!box) { box = document.createElement('div'); box.id = 'ysQuien'; box.className = 'ys-quien'; if (sal && sal.parentNode) sal.parentNode.insertBefore(box, sal.nextSibling); else document.body.insertBefore(box, document.body.firstChild); }
+    box.innerHTML = '<span class="ys-chip">' + esc(s.usuario || s.nombre) + ' · ' + esc(ROL_TXT[s.rol] || s.rol) + '</span><button class="ys-link" type="button" id="ysCambiar">Cambiar de persona</button>';
+    document.getElementById('ysCambiar').onclick = function () {
+      if (confirm('¿Seguro que quieres cerrar tu sesión y cambiar de persona?')) cerrar('');
+    };
   }
   function cerrar(aviso) {
     ls.del(K.sesion);
     window.YP_SESION = null;
-    quienEres(aviso);
+    pantallaEntrar(aviso);
   }
 
-  // ── 4. iPad: 1 hora sin usarse ───────────────────────────────────────
+  // ── Tiempo sin usarse: iPad 1 h, los demás 6 h ───────────────────────
   var ultimo = 0;
-  function actividad() { var t = Date.now(); if (t - ultimo > 20000) { ultimo = t; ls.set(K.act, String(t)); } }
-  function revisarHora() {
-    if (!esIpad() || !leerSesion()) return;
-    var a = Number(ls.get(K.act)) || 0;
-    if (a && Date.now() - a > UNA_HORA) cerrar('El iPad estuvo 1 hora sin usarse. Lo que estaba a medias se guardó.');
-  }
+  function actividad() { var t = Date.now(); if (t - ultimo > 20000) { ultimo = t; if (leerSesion()) ls.set(K.act, String(t)); } }
+  function vencida(s) { var a = Number(ls.get(K.act)) || 0; return !!(s && a && Date.now() - a > limiteDe(s)); }
+  var avisoTiempo = function (s) { return (s && s.clave_rol === 'ipad' ? 'El iPad estuvo 1 hora' : 'El aparato estuvo 6 horas') + ' sin usarse. Lo que estaba a medias se guardó.'; };
+  function revisarHora() { var s = leerSesion(); if (s && vencida(s) && !capaAbierta()) cerrar(avisoTiempo(s)); }
   ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, actividad, { passive: true, capture: true }); });
   setInterval(revisarHora, 30000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) revisarHora(); });
@@ -217,16 +214,45 @@
   // ── Arranque ─────────────────────────────────────────────────────────
   var sesionAlAbrir = null;
   function arrancar() {
-    if (SIN_SERVIDOR) return aplicar({ id: 'PRF-000', nombre: 'Demo', rol: 'Dueño', clave_rol: 'dueno', colab: null });
-    var vencio = false;
-    if (esIpad() && leerSesion()) { var a = Number(ls.get(K.act)) || 0; if (a && Date.now() - a > UNA_HORA) { ls.del(K.sesion); vencio = true; } }
-    var s = leerSesion();
-    if (!ls.get(K.clave)) return pedirClave('');
-    if (!s) return quienEres(vencio ? 'El iPad estuvo 1 hora sin usarse. Lo que estaba a medias se guardó.' : '');
+    if (SIN_SERVIDOR) return aplicar({ id: 'PRF-000', usuario: 'Demo', nombre: 'Demo', rol: 'Dueño', clave_rol: 'dueno', modulos: [], colab: null });
+    var s = leerSesion(), aviso = '';
+    if (s && vencida(s)) { aviso = avisoTiempo(s); sesionAlAbrir = s; ls.del(K.sesion); s = null; }
+    if (!s) return pantallaEntrar(aviso);
     sesionAlAbrir = s;
     actividad();
     aplicar(s);
+    refrescar(s);
   }
-  window.YP = { sesion: leerSesion, cambiar: function () { cerrar(''); } };
+  // Al abrir cada página: el servidor dice qué ve ahora este perfil (un dueño pudo cambiar sus accesos o reiniciar su PIN)
+  function refrescar(s) {
+    api('consent_perf_yo', { sesion: s.token }).then(function (r) {
+      var antes = JSON.stringify([s.usuario, s.rol, s.clave_rol, s.modulos]);
+      var n = Object.assign({}, s, { usuario: r.usuario, nombre: r.nombre, rol: r.rol, clave_rol: r.clave_rol, modulos: r.modulos });
+      if (JSON.stringify([n.usuario, n.rol, n.clave_rol, n.modulos]) === antes) return;
+      ls.set(K.sesion, JSON.stringify(n)); sesionAlAbrir = n;
+      if (!capaAbierta()) aplicar(n);
+    }).catch(function (x) { if (/sesión ya no vale/i.test(x.message)) cerrar('Tu sesión terminó. Vuelve a entrar.'); });
+  }
+  // ── Avance guardado de un formulario (Luis, 20/11): si sales a medias y regresas al mismo registro, sigue ahí.
+  // Vive en esta pestaña y es de quien lo empezó. YP.avance(form, clave) → { restaurar() → true si había, borrar() }
+  function avance(form, clave) {
+    var k = 'ypp_borr_' + PAG + '_' + clave + '_' + ((leerSesion() || {}).id || 'x');
+    var campos = function () { return [].slice.call(form.querySelectorAll('input,textarea,select')).filter(function (e) { return e.id && e.type !== 'file' && e.type !== 'password'; }); };
+    var leerV = function () { var o = {}; campos().forEach(function (e) { o[e.id] = (e.type === 'checkbox' || e.type === 'radio') ? e.checked : e.value; }); return o; };
+    var base = JSON.stringify(leerV());
+    var guardar = function () { try { var v = JSON.stringify(leerV()); if (v === base) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (x) {} };
+    if (form._ypAvance) { form.removeEventListener('input', form._ypAvance); form.removeEventListener('change', form._ypAvance); }
+    form._ypAvance = guardar; form.addEventListener('input', guardar); form.addEventListener('change', guardar);
+    return {
+      restaurar: function () {
+        var o = null; try { o = JSON.parse(sessionStorage.getItem(k) || 'null'); } catch (x) {}
+        if (!o) return false;
+        campos().forEach(function (e) { if (!(e.id in o)) return; if (e.type === 'checkbox' || e.type === 'radio') e.checked = !!o[e.id]; else e.value = o[e.id]; });
+        return true;
+      },
+      borrar: function () { try { sessionStorage.removeItem(k); } catch (x) {} base = JSON.stringify(leerV()); },
+    };
+  }
+  window.YP = { sesion: leerSesion, cambiar: function () { cerrar(''); }, puede: function (m) { return puede(leerSesion(), m); }, avance: avance };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar); else arrancar();
 })();
