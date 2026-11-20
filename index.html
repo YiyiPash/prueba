@@ -37,6 +37,8 @@ h1{font-family:var(--title);font-weight:400;font-size:27px;line-height:1.15;colo
 .btn{border:none;border-radius:999px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--on-accent);
   font-family:inherit;font-weight:700;font-size:14px;padding:10px 14px;cursor:pointer}
 .err{color:var(--bad);font-size:13px;margin:0}
+.mod{display:grid;gap:8px}
+.mod h2{margin:8px 0 0;font-size:13px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--mu)}
 </style>
 </head>
 <body>
@@ -48,12 +50,27 @@ h1{font-family:var(--title);font-weight:400;font-size:27px;line-height:1.15;colo
     <button class="btn" type="submit" id="bClave">Guardar clave</button>
     <p class="err" id="eClave" hidden></p>
   </form>
-  <a class="op" href="consentimiento/"><span class="ic" aria-hidden="true">✍️</span><span><b>Nueva atención</b><small>Consentimiento de perforación o tatuaje</small></span></a>
-  <a class="op" id="opCobrar" href="nota/?ver=cobrar"><span class="ic" aria-hidden="true">📋</span><span><b id="tCobrar">Por cobrar</b><small id="sCobrar">Consentimientos que aún no tienen nota</small></span></a>
-  <a class="op" href="nota/"><span class="ic" aria-hidden="true">🧾</span><span><b>Nota de venta</b><small>Productos o una venta sin consentimiento</small></span></a>
-  <a class="op" href="fichas.html"><span class="ic" aria-hidden="true">🩺</span><span><b>Fichas</b><small>Clientas del día, expediente y revisiones</small></span></a>
-  <a class="op" href="panel.html"><span class="ic" aria-hidden="true">🛠️</span><span><b>Panel de notas</b><small>Corregir, reenviar o anular notas de hoy</small></span></a>
-  <a class="op" href="clientas.html"><span class="ic" aria-hidden="true">👤</span><span><b>Panel de clientas</b><small>Corregir nombre, WhatsApp, correo o tutor</small></span></a>
+  <section class="mod" aria-labelledby="mC">
+    <h2 id="mC">Consentimientos</h2>
+    <a class="op" href="consentimiento/"><span class="ic" aria-hidden="true">✍️</span><span><b>Nuevo</b><small>Datos y salud de la clienta, perforación o tatuaje</small></span></a>
+    <a class="op" id="opFirmar" href="consentimiento/?ver=firmar"><span class="ic" aria-hidden="true">🖊️</span><span><b id="tFirmar">Por firmar</b><small id="sFirmar">Firma con su artista, ya con zonas y material listos</small></span></a>
+    <a class="op" href="fichas.html"><span class="ic" aria-hidden="true">🩺</span><span><b>Fichas del día</b><small>Salud y zonas de cada clienta, para la artista</small></span></a>
+  </section>
+  <section class="mod" aria-labelledby="mV">
+    <h2 id="mV">Ventas</h2>
+    <a class="op" href="nota/"><span class="ic" aria-hidden="true">🧾</span><span><b>Nueva nota</b><small>Productos, servicios o una venta sin consentimiento</small></span></a>
+    <a class="op" id="opCobrar" href="nota/?ver=cobrar"><span class="ic" aria-hidden="true">📋</span><span><b id="tCobrar">Por cobrar</b><small id="sCobrar">Consentimientos y prenotas que aún no tienen nota</small></span></a>
+    <a class="op" href="panel.html"><span class="ic" aria-hidden="true">🛠️</span><span><b>Notas del día</b><small>Corregir, reenviar o anular notas de hoy</small></span></a>
+  </section>
+  <section class="mod" aria-labelledby="mL">
+    <h2 id="mL">Clientas</h2>
+    <a class="op" href="fichas.html#buscar"><span class="ic" aria-hidden="true">📁</span><span><b>Expediente</b><small>Busca a una clienta: perforaciones, visitas y fotos</small></span></a>
+    <a class="op" href="clientas.html"><span class="ic" aria-hidden="true">👤</span><span><b>Datos y Pink Club</b><small>Corregir datos, puntos y notas de papel</small></span></a>
+  </section>
+  <section class="mod" aria-labelledby="mA">
+    <h2 id="mA">Ayuda</h2>
+    <a class="op" href="ayuda.html"><span class="ic" aria-hidden="true">📖</span><span><b>Manual y reglamento</b><small>Cómo se usa el sistema y las reglas del estudio</small></span></a>
+  </section>
 </div>
 <script>
 const AS_URL='https://script.google.com/macros/s/AKfycbwOhVk8lowZwedDv-J0wOCparRSL1MZu9ybJXJ6oru5Br87eLRgtO6Ny10sv947ciuv/exec';
@@ -70,10 +87,16 @@ async function contar(){
   const clave=leer('yp_pink_clave');
   $('fClave').hidden=!!clave;
   if(!clave)return;
+  api('consent_por_firmar',clave).then(d=>{
+    const n=(d.consentimientos||[]).length;
+    $('tFirmar').textContent=n?'Por firmar ('+n+')':'Por firmar';
+    $('sFirmar').textContent=n===1?'Una clienta espera para firmar':n?n+' clientas esperan para firmar':'Nadie espera firma';
+    $('opFirmar').classList.toggle('hay',n>0);
+  }).catch(()=>{});
   try{
     const n=((await api('consent_por_cobrar',clave)).consentimientos||[]).length;
     $('tCobrar').textContent=n?'Por cobrar ('+n+')':'Por cobrar';
-    $('sCobrar').textContent=n===1?'Una clienta espera su nota':n?n+' clientas esperan su nota':'Nadie espera nota';
+    $('sCobrar').textContent=n===1?'Una nota pendiente de cobrar':n?n+' notas pendientes de cobrar':'Nada pendiente de cobrar';
     $('opCobrar').classList.toggle('hay',n>0);
   }catch(e){
     if(/Clave de equipo/i.test(e.message)){localStorage.removeItem('yp_pink_clave');$('fClave').hidden=false;}

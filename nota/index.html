@@ -159,6 +159,17 @@
 .cobrar-item{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--pb);border-radius:12px;padding:12px 14px;font-family:'Poppins',sans-serif;color:var(--tx);cursor:pointer;}
 .cobrar-item b{display:block;font-size:15px;}
 .cobrar-item span{display:block;font-size:12.5px;color:var(--mu);margin-top:2px;}
+.cobrar-item span.cb-pill{display:inline-block;margin:6px 6px 0 0;font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;}
+.cb-pill.ok{background:#ecfdf5;color:#047857;}.cb-pill.warn{background:#fef3c7;color:#92400e;}
+.cobrar-acc{display:flex;gap:8px;margin-top:-4px;}
+.cobrar-acc button{flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--pb);background:#fff;color:var(--mu);font-family:'Poppins',sans-serif;font-size:12px;cursor:pointer;}
+.zona-row{display:flex;align-items:center;gap:8px;margin-top:8px;}
+.zona-row .zona-lbl{font-size:10px;font-weight:600;color:var(--p);text-transform:uppercase;letter-spacing:.8px;flex:none;}
+.zona-row select,.zona-row input{flex:1;min-width:0;border:1.5px solid var(--pb);border-radius:8px;padding:6px 8px;font-family:'Poppins',sans-serif;font-size:12px;color:var(--tx);background:#fff;}
+.zona-aviso{margin-top:6px;background:#fef3c7;color:#92400e;border-radius:8px;padding:6px 9px;font-size:11.5px;}
+#btn-prenota{display:block;width:100%;padding:12px;background:#fff;color:var(--p);border:none;border-top:1px solid var(--pb);font-family:'Poppins',sans-serif;font-size:13px;font-weight:600;cursor:pointer;}
+#btn-prenota:disabled{opacity:.5;cursor:not-allowed;}
+.sin-id{background:#fef3c7;color:#92400e;padding:10px 16px;font-size:12.5px;line-height:1.45;}
 #preview-overlay{display:none;position:fixed;inset:0;background:rgba(253,242,248,.96);z-index:500;flex-direction:column;align-items:center;justify-content:flex-start;padding:16px;overflow-y:auto;}
 .preview-wrap{width:100%;max-width:480px;margin:0 auto;}
 .preview-nota{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 32px rgba(190,24,93,.15);margin-bottom:12px;}
@@ -339,6 +350,7 @@
   <div class="total-bar" id="total-bar">
     <span class="total-lbl">Total</span><span class="total-val">$0</span>
   </div>
+  <button id="btn-prenota" type="button" onclick="guardarPrenota()">💾 Guardar prenota (la cobra otra persona)</button>
   <button id="btn-submit" onclick="enviarNota()">Registrar Nota ✨</button>
 </div>
 </div>
@@ -590,23 +602,28 @@ async function abrirPorCobrar(){
   ov.style.display='block';
   const r=await cargarPorCobrar();
   if(r===null){el.innerHTML='<p style="font-size:13px;color:#b91c1c;">No se pudo cargar la lista. Revisa tu conexión o tu clave e intenta otra vez.</p>';return;}
-  if(!r.length){el.innerHTML=`<p style="font-size:13px;color:var(--mu);">No hay consentimientos sin nota en los últimos ${_porCobrarDias} días.</p>`;return;}
+  if(!r.length){el.innerHTML=`<p style="font-size:13px;color:var(--mu);">No hay consentimientos ni prenotas sin nota en los últimos ${_porCobrarDias} días.</p>`;return;}
   const hoy=new Date(),iso=`${hoy.getFullYear()}-${pad(hoy.getMonth()+1)}-${pad(hoy.getDate())}`;
   el.innerHTML=r.map((c,i)=>{
     const zonas=c.perforaciones.map(x=>x.zona+(x.lado&&x.lado!=='Centro'?' '+x.lado.toLowerCase():'')).join(' · ');
     const cuando=(c.fecha===iso?'Hoy':c.fecha.split('-').reverse().join('/'))+(c.hora?' '+c.hora:'');
-    return `<button class="cobrar-item" type="button" onclick="elegirPorCobrar(${i})"><b>${esc(c.apodo||c.nombre)}</b><span>${esc(zonas)}</span><span>${esc([cuando,c.lugar,c.atendio?'atendió '+c.atendio:''].filter(Boolean).join(' · '))}</span></button>`;
+    const pills=(c.estado_firma==='Por firmar'?'<span class="cb-pill warn">🖊️ Sin firmar</span>':'')
+      +(c.prenota?`<span class="cb-pill ok">✔ Prenota de ${esc(c.prenota.hizo||'—')}${c.prenota.hora?' · '+esc(c.prenota.hora):''}${c.prenota.total?' · $'+fmtN(c.prenota.total):''}</span>`:'');
+    return `<button class="cobrar-item" type="button" onclick="elegirPorCobrar(${i})"><b>${esc(c.apodo||c.nombre)}</b>${zonas?`<span>${esc(zonas)}</span>`:''}<span>${esc([cuando,c.lugar,c.atendio?'atendió '+c.atendio:''].filter(Boolean).join(' · '))}</span>${pills}</button>`
+      +(c.prenota?`<div class="cobrar-acc"><button type="button" onclick="descartarPrenota(${i})">Descartar prenota</button></div>`:'');
   }).join('');
 }
 // Las notas sin registrar viven solo en esta página: avisar antes de salir
 function salirAInicio(){
   saveCurrentForm();
-  return !tabs.some(t=>t.items.length&&!t.registrada)||confirm('Tienes una nota sin registrar y se va a perder. ¿Salir al Inicio?');
+  return !tabs.some(t=>t.items.length&&!t.registrada&&!t.prenota_al_dia)||confirm('Tienes una nota sin registrar y se va a perder. ¿Salir al Inicio?');
 }
 function cerrarPorCobrar(){document.getElementById('cobrar-overlay').style.display='none';}
 async function elegirPorCobrar(i){
   const c=_porCobrar[i];if(!c)return;
   cerrarPorCobrar();saveCurrentForm();
+  if(c.prenota)return abrirPrenota(c.prenota.id);
+  if(c.estado_firma==='Por firmar')toast('⚠️ Ojo: este consentimiento todavía no está firmado');
   const abierta=tabs.find(t=>t.consent&&t.consent.id===c.id_consent);
   if(abierta){switchTab(abierta.id);return;}
   const t=getTab();
@@ -618,7 +635,7 @@ function agregarTatuaje(t){
   const src=catalogo.find(i=>i.sku===t.sku_serv);
   const it=src?itemDeCatalogo(src):Object.assign(itemLibre(),{categoria:'Tatuaje'});
   const desc=t.zona+(src?' · '+src.nombre:'')+(t.tipo==='Retoque'?' · Retoque':'');
-  Object.assign(it,{descripcion:desc,desc_custom:true,tipo:'S'});
+  Object.assign(it,{descripcion:desc,desc_custom:true,tipo:'S',zona:t.zona||'',id_perfo:t.id_perfo||''});
   const a=artistas.find(x=>x.alias===t.perforadora);
   if(a){it.id_artista=a.id;it.alias_artista=a.alias;}
   getTab().items.push(it);
@@ -637,6 +654,86 @@ function renderConsentAviso(){
 }
 const _renderItemsSinAviso=renderItems;
 renderItems=function(){_renderItemsSinAviso();renderConsentAviso();};
+
+// ── ZONA DE CADA SERVICIO (punto 5) ─────────────────────────────────
+// Cada perforación o tatuaje de la nota guarda su zona (y la perforación del consentimiento) para que el
+// expediente, la clienta y los pagos sepan qué se hizo, sin cruzar a mano. A la clienta le sale en chiquito.
+const zonaDe=x=>x.zona+(x.lado&&x.lado!=='Centro'?' '+x.lado.toLowerCase():'');
+function zonasConsent(tab){return tab&&tab.consent&&!tab.consent.tatuaje?tab.consent.perforaciones:[];}
+function asignarZona(item){
+  const tab=getTab(),lista=zonasConsent(tab);if(!lista.length)return;
+  const usadas=tab.items.filter(i=>i!==item&&i.id_perfo_idx!==undefined&&i.id_perfo_idx!=='').map(i=>+i.id_perfo_idx);
+  const k=lista.findIndex((x,j)=>!usadas.includes(j));if(k<0)return;
+  item.id_perfo_idx=k;item.zona=zonaDe(lista[k]);item.id_perfo=lista[k].id_perfo||'';item.zona_otra=false;
+}
+function zonaHTML(item){
+  if(!esServicio(item))return '';
+  const tab=getTab(),lista=zonasConsent(tab);
+  if(tab.consent&&tab.consent.tatuaje)return item.zona?`<div class="zona-row"><span class="zona-lbl">Zona</span><span style="font-size:12px">${esc(item.zona)}</span></div>`:'';
+  if(!lista.length)return `<div class="zona-row"><span class="zona-lbl">Zona</span><input type="text" value="${esc(item.zona||'')}" placeholder="Ej. Helix izquierdo (opcional)" oninput="onZonaTexto(${item.id},this.value)"></div>`;
+  const sel=item.zona_otra?'otra':(item.id_perfo_idx!==undefined&&item.id_perfo_idx!==''?String(item.id_perfo_idx):'');
+  return `<div class="zona-row"><span class="zona-lbl">Zona</span><select onchange="onZona(${item.id},this.value)">
+      <option value=""${sel===''?' selected':''}>Elegir…</option>
+      ${lista.map((x,j)=>`<option value="${j}"${sel===String(j)?' selected':''}>${esc(zonaDe(x))}</option>`).join('')}
+      <option value="otra"${sel==='otra'?' selected':''}>Otra zona…</option></select></div>
+    ${item.zona_otra?`<div class="zona-row"><span class="zona-lbl">¿Cuál?</span><input type="text" value="${esc(item.zona||'')}" placeholder="Escribe la zona" oninput="onZonaTexto(${item.id},this.value)"></div>
+      <div class="zona-aviso">Esta zona no está en el consentimiento firmado. Si la zona cambió después de firmar, hace falta un consentimiento nuevo (Consentimientos → Nuevo).</div>`:''}`;
+}
+function onZona(id,v){
+  const tab=getTab(),it=tab.items.find(i=>i.id===id);if(!it)return;
+  const lista=zonasConsent(tab);
+  if(v==='otra'){it.zona_otra=true;it.zona='';it.id_perfo='';it.id_perfo_idx='';}
+  else if(v===''){it.zona_otra=false;it.zona='';it.id_perfo='';it.id_perfo_idx='';}
+  else{const x=lista[+v];it.zona_otra=false;it.id_perfo_idx=+v;it.zona=zonaDe(x);it.id_perfo=x.id_perfo||'';}
+  renderItems();
+}
+function onZonaTexto(id,v){const it=getTab().items.find(i=>i.id===id);if(it){it.zona=v;it.id_perfo='';}}
+
+// ── PRENOTA: la misma nota, guardada a medias ───────────────────────
+// La artista la deja lista y recepción la cobra desde Por cobrar. No cuenta como venta hasta registrarse.
+const PRENOTA_CAMPOS=['form','items','pink','emails_nota','emails_manual','manual_mismo','elaboro','consent','publico','pagosActivos','pagosMontos','anticipo_activo','anticipo_monto'];
+async function guardarPrenota(){
+  saveCurrentForm();
+  const tab=getTab();
+  if(!tab.items.length)return toast('⚠️ Agrega al menos un servicio o producto');
+  if(!tab.elaboro.id)return toast('⚠️ Elige en "Elaboró" quién hace la prenota');
+  if(!pinkClave()&&!await pinkPedirClave(true))return;
+  const datos={};PRENOTA_CAMPOS.forEach(k=>datos[k]=tab[k]);
+  const b=document.getElementById('btn-prenota');b.disabled=true;b.textContent='Guardando prenota…';
+  try{
+    const r=await pinkApi('consent_prenota_guardar',{id_prenota:tab.prenota||'',id_consent:tab.consent?tab.consent.id:'',id_clienta:tab.pink.paga||'',
+      nombre:tab.form.nombre_clienta.trim()||(tab.pink.personas[0]||{}).apodo||'',hizo:tab.elaboro,total:calcTotal(),datos});
+    tab.prenota=r.id_prenota;tab.prenota_al_dia=true;tab.label='Prenota '+r.id_prenota.replace('PRE-','');renderTabBar();
+    toast('✅ Prenota guardada. Ya aparece en Por cobrar');cargarPorCobrar();
+  }catch(e){toast('❌ '+e.message);}
+  finally{b.disabled=false;b.textContent='💾 Guardar prenota (la cobra otra persona)';}
+}
+async function abrirPrenota(id){
+  const ya=tabs.find(t=>t.prenota===id);if(ya){switchTab(ya.id);return;}
+  try{
+    const r=await pinkApi('consent_prenota_abrir',{id});
+    const t=getTab();
+    if(t.items.length||t.consent||t.publico||t.pink.personas.length||t.form.nombre_clienta.trim()||t.emails_nota.length)addTab();
+    const tab=getTab(),d=r.datos||{};
+    PRENOTA_CAMPOS.forEach(k=>{if(d[k]!==undefined)tab[k]=d[k];});
+    tab.items.forEach(i=>i.id=_nextItemId++);
+    tab.prenota=r.id_prenota;tab.prenota_al_dia=true;tab.label='Prenota '+r.id_prenota.replace('PRE-','');
+    loadTabForm(tab);
+    toast(`Prenota de ${r.hizo||'—'}: revisa y registra`);
+    // Puntos y estado del Pink Club al momento (lo guardado puede ser de hace rato)
+    for(const p of [...tab.pink.personas]){
+      try{const x=(await pinkApi('pink_buscar',{q:p.id})).resultados.find(y=>y.id===p.id);if(x){Object.assign(p,x);}}catch(e){}
+    }
+    if(getTab()===tab){renderPink();renderItems();}
+  }catch(e){toast('❌ '+e.message);cargarPorCobrar();}
+}
+async function descartarPrenota(i){
+  const c=_porCobrar[i];if(!c||!c.prenota)return;
+  if(!confirm(`¿Descartar la prenota de ${c.prenota.hizo||'—'} para ${c.apodo||c.nombre}? Lo que tenía se pierde.`))return;
+  try{await pinkApi('consent_prenota_cancelar',{id:c.prenota.id});toast('Prenota descartada');abrirPorCobrar();
+    const t=tabs.find(x=>x.prenota===c.prenota.id);if(t){t.prenota='';t.prenota_al_dia=false;}}
+  catch(e){toast('❌ '+e.message);}
+}
 
 // ── BÚSQUEDA ────────────────────────────────────────────────────────
 function onSearch(){
@@ -670,7 +767,9 @@ function closeSearch(){document.getElementById('search-results').classList.remov
 // ── ÍTEMS ───────────────────────────────────────────────────────────
 function addItem(idx){
   const src=currentResults[idx];if(!src)return;
-  getTab().items.push(itemDeCatalogo(src));
+  const it=itemDeCatalogo(src);
+  getTab().items.push(it);
+  if(esServicio(it))asignarZona(it);
   document.getElementById('search-input').value='';closeSearch();renderItems();
 }
 function itemDeCatalogo(src){
@@ -705,6 +804,8 @@ function removeItem(id){const t=getTab();t.items=t.items.filter(i=>i.id!==id);re
 function toggleServicio(id){
   const item=getTab().items.find(i=>i.id===id);if(!item||!item.tiene_serv)return;
   item.con_servicio=!item.con_servicio;
+  if(item.con_servicio&&!item.zona)asignarZona(item);
+  if(!item.con_servicio&&!esServicio(item)){item.zona='';item.id_perfo='';item.zona_otra=false;}
   if(!item.desc_custom)item.descripcion=item.con_servicio?'Piercing '+item.nombre_prod:item.nombre_prod;
   item.precio=item.con_servicio?item.precio_prod+item.precio_serv:item.precio_prod;
   recalcImporte(item);renderItems();
@@ -852,6 +953,7 @@ function renderItems(){
         <button class="item-del" onclick="removeItem(${item.id})">×</button>
       </div>
       ${perfoHtml}
+      ${zonaHTML(item)}
       <div class="item-controls">
         <div><div class="ic-lbl">Precio</div><div class="mini-wrap"><span class="sym sym-l">$</span>
           <input class="mini-in precio" type="number" inputmode="decimal" value="${item.precio}" min="0" step="1" oninput="onPrecio(${item.id},this.value)">
@@ -997,6 +1099,8 @@ async function enviarNota(){
     const sinId=REQUIERE_ID&&tab.items.find(i=>esServicio(i)&&!i.id_receptora&&!tab.pink.paga);
     if(sinId)return toast('⚠️ Esta nota lleva un servicio: elige a la clienta en Pink Club');
   }
+  // ID flexible (Luis, 19/11), pero nunca por accidente: la vista previa pide confirmarlo
+  const avisoSinId=tab.items.some(esServicio)&&!tab.pink.paga&&!tab.items.some(i=>i.id_receptora);
   if(!tab.publico&&!tab.emails_nota.length) return toast('⚠️ Agrega al menos un correo para la nota');
 if(!tab.publico&&!tab.manual_mismo&&!tab.emails_manual.length) return toast('⚠️ Agrega al menos un correo para el manual');
   const errPink=pinkValidarAntesDeEnviar(tab);
@@ -1015,18 +1119,21 @@ if(!tab.publico&&!tab.manual_mismo&&!tab.emails_manual.length) return toast('⚠
       precio:i.precio,promo:i.promo,importe:importeNeto(i),tipo:i.tipo,
       id_artista:i.id_artista||'-',alias_artista:i.alias_artista||'-',
       id_receptora:i.id_receptora||'',puntos_aplicados:i.regalo_cumple?0:(i.puntos_aplicados||0),regalo_cumple:!!i.regalo_cumple,
+      zona:(i.zona||'').trim(),id_perfo:i.id_perfo||'',
     })),
     total:calcTotal(),anticipo:tab.anticipo_activo?(tab.anticipo_monto||0):0,
     pagos:getPagosPayload(),comentarios:form.comentarios||'-',
     id_paga:tab.pink.paga||'',puntos_canjeados:ptsCanje,id_canje:ptsCanje>0?tab.pink.paga:'',
   };
   if(tab.consent)payload.id_consent=tab.consent.id;   // el servidor escribe el número de nota en su expediente
-  if(payload.id_consent||payload.id_paga||payload.items.some(i=>i.id_receptora))payload.clave=localStorage.getItem('yp_pink_clave')||'';
-  mostrarPreview(payload,tab);
+  if(tab.prenota)payload.id_prenota=tab.prenota;      // al registrarse, la prenota queda cobrada
+  if(payload.id_consent||payload.id_prenota||payload.id_paga||payload.items.some(i=>i.id_receptora))payload.clave=localStorage.getItem('yp_pink_clave')||'';
+  mostrarPreview(payload,tab,avisoSinId);
 }
-function mostrarPreview(payload,tab){
+function mostrarPreview(payload,tab,sinId){
   _pendingPayload=payload;_pendingTab=tab;
-  document.getElementById('preview-content').innerHTML=buildPreviewHTML(payload);
+  document.getElementById('preview-content').innerHTML=(sinId?`<div class="sin-id"><b>⚠️ Esta nota lleva un servicio y no tiene ID de clienta.</b><br>Sin ID no queda en su expediente ni en su seguimiento. Si fue por error, toca Cancelar y elige a la clienta en Pink Club o en Por cobrar.</div>`:'')+buildPreviewHTML(payload);
+  document.getElementById('btn-preview-ok').textContent=sinId?'Sí, registrar sin ID':'Registrar Nota ✨';
   const ov=document.getElementById('preview-overlay');
   ov.style.display='flex';ov.scrollTop=0;
 }
@@ -1048,7 +1155,7 @@ async function confirmarEnvio(){
   try{
     const res=await fetch(AS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload),redirect:'follow'});
     const json=await res.json();
-    if(json.ok){tab.registrada=true;mostrarExito(json.data.nota,tab.emails_nota);}
+    if(json.ok){tab.registrada=true;tab.prenota='';mostrarExito(json.data.nota,tab.emails_nota);}
     else throw new Error(json.error||'Error del servidor');
   }catch(e){toast('❌ Error: '+e.message);}
   finally{btn.disabled=false;btn.textContent='Registrar Nota ✨';}
@@ -1059,7 +1166,7 @@ function buildPreviewHTML(data){
   const filas=data.items.map(item=>{
     const prTag=item.promo&&item.promo!=='-'?`<br><span style="font-size:10px;color:#be185d;background:#fdf2f8;border-radius:4px;padding:1px 5px;">${esc(item.promo)}</span>`:'';
     return `<tr>
-      <td style="padding:7px 5px;border-bottom:1px solid #fce7f3;font-size:12px;">${esc(item.descripcion)}${prTag}</td>
+      <td style="padding:7px 5px;border-bottom:1px solid #fce7f3;font-size:12px;">${esc(item.descripcion)}${item.zona?`<br><span style="font-size:10.5px;color:#9ca3af;">${esc(item.zona)}</span>`:''}${prTag}</td>
       <td style="padding:7px 5px;border-bottom:1px solid #fce7f3;text-align:center;font-size:12px;">${item.cantidad}</td>
       <td style="padding:7px 5px;border-bottom:1px solid #fce7f3;text-align:right;font-weight:700;color:#be185d;font-size:12px;">$${fmtN(item.importe)}</td>
     </tr>`;
@@ -1201,6 +1308,7 @@ function pinkDatosPaga(tab){
 }
 function pinkQuitar(id){
   const tab=getTab(),pk=tab.pink;
+  if(pk.personas.length===1&&tab.items.some(esServicio)&&!confirm('Esta nota lleva un servicio. Si quitas a la clienta, la nota se queda sin ID y no llega a su expediente. ¿Quitarla?'))return;
   pk.personas=pk.personas.filter(x=>x.id!==id);
   tab.items.forEach(it=>{if(it.id_receptora===id){it.id_receptora='';it.regalo_cumple=false;}});
   if(pk.paga===id){pk.paga=pk.personas[0]?pk.personas[0].id:'';pk.canje=false;tab.items.forEach(it=>{it.puntos_aplicados=0;});pinkDatosPaga(tab);}
