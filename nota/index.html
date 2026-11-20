@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <title>PRUEBA · Yiyi Pash · Notas</title><meta name="robots" content="noindex"><script>document.addEventListener('DOMContentLoaded',function(){var d=document.createElement('div');d.textContent='PRUEBA · nada de lo que hagas aquí es real';d.style.cssText='position:sticky;top:0;z-index:99999;background:#b91c1c;color:#fff;text-align:center;font:700 13px/1.4 system-ui,sans-serif;padding:6px 8px';document.body.insertBefore(d,document.body.firstChild);});</script><link rel="icon" type="image/png" sizes="32x32" href="https://yiyipash.com/prueba/pink/icono-32.png"><link rel="icon" type="image/png" sizes="192x192" href="https://yiyipash.com/prueba/pink/icono-192.png"><link rel="apple-touch-icon" href="https://yiyipash.com/prueba/pink/icono-180.png">
+  <title>PRUEBA · Yiyi Pash · Notas</title><meta name="robots" content="noindex"><script>document.addEventListener('DOMContentLoaded',function(){var d=document.createElement('div');d.textContent='PRUEBA · nada de lo que hagas aquí es real';d.style.cssText='position:sticky;top:0;z-index:99999;background:#b91c1c;color:#fff;text-align:center;font:700 13px/1.4 system-ui,sans-serif;padding:6px 8px';document.body.insertBefore(d,document.body.firstChild);});</script><link rel="icon" type="image/png" sizes="32x32" href="https://yiyipash.com/prueba/icono-32.png"><link rel="icon" type="image/png" sizes="192x192" href="https://yiyipash.com/prueba/icono-192.png"><link rel="apple-touch-icon" href="https://yiyipash.com/prueba/icono-180.png">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -262,7 +262,9 @@
   <!-- Elaboró + Nombre + Emails -->
   <div class="section">
     <div class="field" style="margin-bottom:9px;"><label>Elaboró</label>
-      <select id="elaboro-sel" onchange="onElabora(this)"><option value="">Selecciona...</option></select>
+      <div style="display:flex;gap:8px;align-items:center"><select id="elaboro-sel" onchange="onElabora(this)" style="flex:1"><option value="">Selecciona...</option></select>
+        <button type="button" class="btn-libre" id="elaboro-cambiar" onclick="cambiarElaboro()" style="display:none;white-space:nowrap">Cambiar</button></div>
+      <div id="elaboro-nota" style="font-size:11px;color:var(--mu);margin-top:3px"></div>
     </div>
     <div class="field" style="margin-bottom:10px;"><label>Nombre clienta</label>
       <input type="text" id="nombre-clienta" placeholder="Nombre..." oninput="onNombre(this.value)">
@@ -415,6 +417,9 @@
   </div>
 </div>
 <div id="toast"></div>
+<div id="nota-cargando" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(253,242,248,.9);flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:24px">
+  <div class="spinner"></div><p id="nota-cargando-txt" style="color:var(--p);font-weight:600;font-size:14px;margin:0">Cargando…</p>
+</div>
 
 <script>
 const AS_URL='https://script.google.com/macros/s/AKfycbwOhVk8lowZwedDv-J0wOCparRSL1MZu9ybJXJ6oru5Br87eLRgtO6Ny10sv947ciuv/exec';
@@ -469,6 +474,7 @@ function loadTabForm(tab){
   document.getElementById('nombre-clienta').value =tab.form.nombre_clienta;
   document.getElementById('comentarios').value    =tab.form.comentarios;
   const sel=document.getElementById('elaboro-sel');if(sel)sel.value=tab.elaboro?.id||'';
+  bloquearElaboro();
   const ai=document.getElementById('anticipo-inputs'),ab=document.getElementById('anticipo-btn'),am=document.getElementById('anticipo-monto');
   if(ai)ai.style.display=tab.anticipo_activo?'block':'none';
   if(ab)ab.textContent=tab.anticipo_activo?'× Quitar anticipo':'+ Anticipo';
@@ -563,7 +569,8 @@ async function tomarDelConsentimiento(){
   localStorage.removeItem('ypp_handoff');
   history.replaceState(null,'',location.pathname);
   if(!h||h.desde!=='consentimiento')return;
-  await aplicarConsentimiento(h);
+  notaCargando('Trayendo lo del consentimiento…');
+  try{await aplicarConsentimiento(h);}finally{notaListo();pintarCobrar();}
 }
 // Llena la nota abierta con un consentimiento, venga del mismo celular o de la fila Por cobrar
 async function aplicarConsentimiento(h){
@@ -589,12 +596,19 @@ async function cargarPorCobrar(){
   try{
     const d=await pinkApi('consent_por_cobrar');
     _porCobrar=d.consentimientos||[];_porCobrarDias=d.dias||7;
-    const b=document.getElementById('btn-cobrar');
-    b.textContent=_porCobrar.length?`📋 Por cobrar (${_porCobrar.length})`:'📋 Por cobrar';
-    b.classList.toggle('hay',_porCobrar.length>0);
+    pintarCobrar();
     return _porCobrar;
   }catch(e){return null;}
 }
+function pintarCobrar(){
+  const b=document.getElementById('btn-cobrar');if(!b)return;
+  const abierta=c=>tabs.some(t=>!t.registrada&&((c.id_consent&&t.consent&&t.consent.id===c.id_consent)||(c.prenota&&t.prenota===c.prenota.id)));
+  const n=_porCobrar.filter(c=>!abierta(c)).length;
+  b.textContent=n?`📋 Por cobrar (${n})`:'📋 Por cobrar';
+  b.classList.toggle('hay',n>0);
+}
+function notaCargando(t){const o=document.getElementById('nota-cargando');document.getElementById('nota-cargando-txt').textContent=t||'Cargando…';o.style.display='flex';}
+function notaListo(){document.getElementById('nota-cargando').style.display='none';}
 async function abrirPorCobrar(){
   if(!pinkClave()&&!await pinkPedirClave(true))return;
   const ov=document.getElementById('cobrar-overlay'),el=document.getElementById('cobrar-lista');
@@ -628,7 +642,8 @@ async function elegirPorCobrar(i){
   if(abierta){switchTab(abierta.id);return;}
   const t=getTab();
   if(t.items.length||t.consent||t.publico||t.pink.personas.length||t.form.nombre_clienta.trim()||t.emails_nota.length)addTab();
-  await aplicarConsentimiento(c);
+  notaCargando('Abriendo la nota de '+(c.apodo||c.nombre||'la clienta')+'…');
+  try{await aplicarConsentimiento(c);}finally{notaListo();pintarCobrar();}
 }
 // El tatuaje no lleva pieza: su línea entra sola con el tamaño y la artista que se eligieron en el consentimiento
 function agregarTatuaje(t){
@@ -710,6 +725,7 @@ async function guardarPrenota(){
 }
 async function abrirPrenota(id){
   const ya=tabs.find(t=>t.prenota===id);if(ya){switchTab(ya.id);return;}
+  notaCargando('Abriendo la prenota…');
   try{
     const r=await pinkApi('consent_prenota_abrir',{id});
     const t=getTab();
@@ -724,8 +740,9 @@ async function abrirPrenota(id){
     for(const p of [...tab.pink.personas]){
       try{const x=(await pinkApi('pink_buscar',{q:p.id})).resultados.find(y=>y.id===p.id);if(x){Object.assign(p,x);}}catch(e){}
     }
-    if(getTab()===tab){renderPink();renderItems();}
+    if(getTab()===tab){renderPink();renderItems();bloquearElaboro();}
   }catch(e){toast('❌ '+e.message);cargarPorCobrar();}
+  finally{notaListo();pintarCobrar();}
 }
 async function descartarPrenota(i){
   const c=_porCobrar[i];if(!c||!c.prenota)return;
@@ -1147,8 +1164,6 @@ async function confirmarEnvio(){
   // La misma nota lleva siempre el mismo código: si se corta el internet y reintentan, no se duplica
   payload.id_envio=tab.id_envio||(tab.id_envio=Date.now().toString(36)+Math.random().toString(36).slice(2));
   cerrarPreview();
-  localStorage.setItem('ypp_elaboro_id',tab.elaboro.id);
-  localStorage.setItem('ypp_elaboro_alias',tab.elaboro.alias);
   localStorage.setItem('ypp_lugar',tab.form.punto_venta);
   const btn=document.getElementById('btn-submit');
   btn.disabled=true;btn.textContent='Enviando...';
@@ -1499,6 +1514,22 @@ function poblarElaboradores(lista){
   lista.forEach(e=>{const o=document.createElement('option');o.value=e.id;o.dataset.alias=e.alias;o.textContent=e.alias;sel.appendChild(o);});
   const savedId=localStorage.getItem('ypp_elaboro_id');
   if(savedId){sel.value=savedId;const tab=getTab();const found=lista.find(e=>e.id===savedId);if(found&&tab)tab.elaboro={id:found.id,alias:found.alias};}
+  bloquearElaboro();
+}
+// "Elaboró" queda fijo con quien está registrado en este celular (o quien hizo la prenota): así no hay malentendidos.
+// Se puede cambiar, pero con aviso. Cuando existan los perfiles (fase 2) saldrá del usuario que entró.
+function bloquearElaboro(){
+  const tab=getTab(),sel=document.getElementById('elaboro-sel'),b=document.getElementById('elaboro-cambiar'),n=document.getElementById('elaboro-nota');
+  if(!tab||!sel)return;
+  const fijo=!!(tab.elaboro&&tab.elaboro.id)&&!tab.elaboro_libre;
+  sel.disabled=fijo;b.style.display=fijo?'':'none';
+  n.textContent=!fijo?(localStorage.getItem('ypp_elaboro_id')?'':'Elige quién usa este celular; se queda guardado.')
+    :(tab.prenota?'Lo hizo quien guardó la prenota.':'Quien está registrado en este celular.');
+}
+function cambiarElaboro(){
+  const tab=getTab();
+  if(!confirm(`Esta nota dice que la elaboró ${tab.elaboro.alias||'—'}. ¿Cambiarlo? Hazlo solo si de verdad la hizo otra persona.`))return;
+  tab.elaboro_libre=true;bloquearElaboro();document.getElementById('elaboro-sel').focus();
 }
 function poblarFallback(){
   poblarLugares([{lugar:'Yiyipash Studio'},{lugar:'Peace & Love Stores'},{lugar:'Casa OKO'}]);
@@ -1511,6 +1542,8 @@ function onElabora(sel){
   const tab=getTab();if(!tab)return;
   const opt=sel.options[sel.selectedIndex];
   tab.elaboro={id:sel.value,alias:sel.value?(opt?.dataset.alias||sel.value):''};
+  // La primera vez se registra este celular con esa persona (después ya no cambia solo)
+  if(!localStorage.getItem('ypp_elaboro_id')&&sel.value){localStorage.setItem('ypp_elaboro_id',tab.elaboro.id);localStorage.setItem('ypp_elaboro_alias',tab.elaboro.alias);}
 }
 function onNombre(val){
   const tab=getTab();if(!tab)return;
