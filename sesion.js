@@ -16,6 +16,8 @@
   var PAGINAS = { inicio: '*', ayuda: '*', consentimiento: 'consentimiento', fichas: 'fichas', nota: 'nota', panel: 'panel', clientas: 'clientas', config: 'config', perfiles: 'dueno' };
   var HORA = 60 * 60 * 1000, LIMITE = { ipad: HORA, otro: 6 * HORA };
   var K = { clave: 'yp_pink_clave', sesion: 'ypp_sesion', act: 'ypp_actividad' };
+  // Sin la clave del aparato, las páginas usan esta marca: el servidor deja pasar con la sesión con PIN (Pink.gs pinkCheckClave)
+  var CON_SESION = 'con-sesion-pin';
   // Fuera de yiyipash.com (una copia en la computadora) no hay servidor: se comporta como dueño, sin pedir nada
   var SIN_SERVIDOR = !/(\.github\.io|(^|\.)yiyipash\.com|^localhost|^127\.0\.0\.1)$/.test(location.hostname);
 
@@ -33,6 +35,7 @@
       return exp > Date.now() ? s : null;
     } catch (e) { return null; }
   }
+  try { if (leerSesion() && !ls.get(K.clave)) ls.set(K.clave, CON_SESION); } catch (e) {}
   var limiteDe = function (s) { return s && s.clave_rol === 'ipad' ? LIMITE.ipad : LIMITE.otro; };
   function puede(s, lista) {
     if (!s) return false;
@@ -116,7 +119,7 @@
   var paso = { usuario: '', pin: '', clave: '', aviso: '' };
   function pantallaEntrar(aviso, err) {
     paso.aviso = aviso || '';
-    var nuevo = !ls.get(K.clave);
+    var nuevo = false;   // (Luis, 20/11) entrar ya no pide la clave del aparato: basta usuario + PIN. La clave maestra solo se pide al crear un PIN.
     abrirCapa((paso.aviso ? '<p class="ys-aviso">' + esc(paso.aviso) + '</p>' : '') +
       '<h1>Entrar</h1><form class="ys-card" id="ysF" autocomplete="off">' +
       '<label>Usuario<input type="text" id="ysU" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Ej. luis" value="' + esc(paso.usuario) + '"></label>' +
@@ -147,7 +150,7 @@
   // Primera vez (o PIN reiniciado): el PIN que escribió es el nuevo; se confirma y Luis o Yoltic ponen la clave maestra
   function primeraVez(usuario) {
     if (pinFacil(paso.pin)) { paso.pin = ''; return pantallaEntrar(paso.aviso, 'Hola, ' + usuario + '. Es tu primera vez: ese PIN es muy fácil de adivinar. Elige otro.'); }
-    var yaClave = !!paso.clave;          // aparato nuevo: ya la escribieron en la pantalla anterior
+    var yaClave = !!paso.clave;          // (ya no se escribe al entrar: aquí siempre se pide)
     abrirCapa('<h1>Hola, ' + esc(usuario) + '</h1><p class="ys-hint">Es tu primera vez (o te reiniciaron el PIN). El PIN que escribiste será el tuyo.</p>' +
       '<form class="ys-card" id="ysF" autocomplete="off">' +
       '<label>Escribe tu PIN otra vez<input type="password" id="ysP2" class="ys-pin" inputmode="numeric" placeholder="6 números"></label>' +
@@ -168,6 +171,7 @@
   }
   function entro(s) {
     if (paso.clave) ls.set(K.clave, paso.clave);           // el aparato queda registrado
+    else if (!ls.get(K.clave)) ls.set(K.clave, CON_SESION);
     ls.set(K.sesion, JSON.stringify(s));
     ls.set(K.act, String(Date.now()));
     if (s.colab && s.clave_rol !== 'ipad') { ls.set('ypp_elaboro_id', s.colab.id); ls.set('ypp_elaboro_alias', s.colab.alias); }
