@@ -267,6 +267,7 @@ $('form').addEventListener('submit',e=>{
 });
 async function guardar(c,fotos){
   const cuerpo={tipo,campos:c};
+  if(E.nuevo&&E.bzr)cuerpo.bzr=E.bzr;   // viene de Bazar: ese precio rápido queda "Pasado" y su foto pasa al producto
   if(E.nuevo){const v=$('cat').value;if(v==='__nueva')cuerpo.cat_nueva={cod:$('catCod').value,nombre:$('catNom').value.trim()};else cuerpo.cat=v;}
   else{cuerpo.codigo=E.item.codigo;cuerpo.antes={};CAMPOS[tipo].forEach(k=>cuerpo.antes[k]=E.item[k]);}
   try{
@@ -300,9 +301,21 @@ $('fEstado').addEventListener('click',e=>{const b=e.target.closest('[data-e]');i
 $('q').addEventListener('input',pintar);
 $('lista').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(b){okMsg('');abrir(b.dataset.c);}});
 $('bNuevo').onclick=()=>{okMsg('');abrir('');};
+// Bazar → "Pasar al catálogo": abre "Producto nuevo" con el nombre, el precio y las notas del precio rápido
+function desdeBazar(){
+  if(!/[?&]desde=bazar/.test(location.search)||!D.editar)return;
+  history.replaceState(null,'',location.pathname);
+  let b=null;try{b=JSON.parse(sessionStorage.getItem('ypp_cat_desde_bazar')||'null');sessionStorage.removeItem('ypp_cat_desde_bazar');}catch(e){}
+  if(!b||!b.bzr)return;
+  tipo='P';[...$('fTipo').children].forEach(x=>x.setAttribute('aria-pressed',x.dataset.t==='P'));pintar();
+  abrir('');E.bzr=b.bzr;
+  $('nombre').value=b.nombre||'';$('precio').value=b.precio;$('comentarios').value=b.notas||'';parecidos();
+  $('eSub').innerHTML='Viene del bazar ('+esc(b.bzr)+'). Su foto pasa al producto. Elige la categoría.';
+  $('fotoAct').textContent='Se usa la foto del bazar';
+}
 async function cargar(){
   error('');
-  try{D=await api('consent_cat_lista',{});if(!D.editar){error('Tu perfil puede ver los precios, pero no cambiar el catálogo.');$('bNuevo').hidden=true;}pintar();}
+  try{D=await api('consent_cat_lista',{});if(!D.editar){error('Tu perfil puede ver los precios, pero no cambiar el catálogo.');$('bNuevo').hidden=true;}pintar();desdeBazar();}
   catch(x){error(x.message);}
   finally{$('cargador').hidden=true;}
 }

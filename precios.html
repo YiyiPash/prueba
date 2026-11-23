@@ -71,6 +71,7 @@ h1{font-weight:700;font-size:23px;line-height:1.2;color:#b82a6c;margin:0;letter-
       <button class="chip" type="button" data-f="todo" aria-pressed="true">Todo</button>
       <button class="chip" type="button" data-f="P" aria-pressed="false">Piezas y productos</button>
       <button class="chip" type="button" data-f="S" aria-pressed="false">Servicios</button>
+      <button class="chip" type="button" data-f="B" aria-pressed="false">Bazar</button>
     </div>
   </div>
   <div class="lista" id="lista" aria-live="polite"></div>
@@ -99,20 +100,22 @@ try{minis=JSON.parse(sessionStorage.getItem('ypp_cat_minis')||'{}');}catch(e){}
 
 function todos(){
   if(!D)return [];
-  return D.productos.filter(p=>p.activo).concat(D.servicios.filter(s=>s.activo));
+  const bz=(D.rapidos||[]).map(x=>({tipo:'B',codigo:x.id,nombre:x.nombre||'Sin nombre',precio:x.precio,foto:x.foto,cat:'BZR',categoria:'Bazar · precio rápido',descripcion:x.notas,activo:true}));
+  return D.productos.filter(p=>p.activo).concat(D.servicios.filter(s=>s.activo),bz);
 }
 function pintar(){
   const q=norm($('q').value.trim());
   let L=todos().filter(i=>filtro==='todo'||i.tipo===filtro);
   if(q)L=L.filter(i=>norm(i.nombre+' '+i.codigo+' '+i.categoria+' '+(i.descripcion||'')+' '+(i.material||'')).includes(q));
-  L.sort((a,b)=>a.tipo===b.tipo?(a.categoria||'').localeCompare(b.categoria||'')||a.nombre.localeCompare(b.nombre,'es',{numeric:true}):a.tipo==='P'?-1:1);
+  const ORD={P:0,S:1,B:2};
+  L.sort((a,b)=>a.tipo===b.tipo?(a.categoria||'').localeCompare(b.categoria||'')||a.nombre.localeCompare(b.nombre,'es',{numeric:true}):ORD[a.tipo]-ORD[b.tipo]);
   let html='',g=null;
   L.forEach(i=>{
-    const grupo=i.tipo==='S'?'Servicios · '+(i.categoria||i.cat):(i.categoria||i.cat);
+    const grupo=i.tipo==='S'?'Servicios · '+(i.categoria||i.cat):i.tipo==='B'?'Bazar · precios rápidos (en la nota van como ítem libre)':(i.categoria||i.cat);
     if(grupo!==g&&!q){g=grupo;html+=`<div class="grupo">${esc(grupo)}</div>`;}
     const m=i.foto&&minis[i.foto];
     html+=`<button class="it" type="button" data-c="${esc(i.codigo)}">
-      <span class="mini">${m?`<img alt="" src="${m}">`:esc(i.cat||i.codigo.slice(0,3))}</span>
+      <span class="mini">${m?`<img alt="" src="${m}">`:i.tipo==='B'?'📸':esc(i.cat||i.codigo.slice(0,3))}</span>
       <span class="n"><b>${esc(i.nombre)}</b><small>${esc(i.codigo)}${i.material?' · '+esc(i.material):''}</small></span>
       <span class="p"><b>${pesos(i.precio)}</b>${i.con_servicio?`<small>con perforación ${pesos(i.con_servicio)}</small>`:''}</span></button>`;
   });
@@ -153,8 +156,9 @@ async function cargar(){
   error('');
   if(D){$('cargador').hidden=true;pintar();}
   try{
-    D=await api('consent_cat_lista',{});
-    guardar('ypp_cache_precios',JSON.stringify({productos:D.productos,servicios:D.servicios}));
+    const [c,b]=await Promise.all([api('consent_cat_lista',{}),api('consent_bz_lista',{}).catch(()=>({rapidos:[]}))]);
+    D=Object.assign(c,{rapidos:b.rapidos||[]});
+    guardar('ypp_cache_precios',JSON.stringify({productos:D.productos,servicios:D.servicios,rapidos:D.rapidos}));
     pintar();
   }catch(x){error(x.message);}
   finally{$('cargador').hidden=true;}
