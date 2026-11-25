@@ -68,10 +68,13 @@ input[type=checkbox]{width:20px;height:20px;padding:0;accent-color:var(--c)}
 .slot .q span.t{color:var(--mu);font-size:13.5px;overflow-wrap:anywhere}
 .slot.libre{background:var(--c3);border-style:dashed;border-color:#a9c9ea;padding:6px 11px}
 .slot.libre .q{color:var(--c);font-weight:600;font-size:13.5px}
-.slot.sigue{background:transparent;border:none;padding:0 11px;cursor:default}
-.slot.sigue .q{font-size:12.5px;color:var(--mu)}
+.slot .h small{display:block;font-weight:500;font-size:12px;color:var(--mu)}
+.slot .cruce{font-size:12.5px;color:var(--warn);font-weight:500}
+.slot.cruza{border-left:4px solid #e9c27a}
 .slot.bloque{background:var(--gris);border-color:var(--gris);cursor:default}
+button.slot.bloque{cursor:pointer}
 .slot.bloque .h,.slot.bloque .q{color:var(--gris-fg);font-weight:700}
+.slot.bloque .q small{font-weight:500}
 .slot.pend{border-style:dashed;border-color:var(--warn)}
 .slot.llego{border-color:var(--ok);box-shadow:0 0 0 1px var(--ok) inset}
 .slot.hecha{opacity:.75}
@@ -138,6 +141,7 @@ input[type=checkbox]{width:20px;height:20px;padding:0;accent-color:var(--c)}
       <p class="mu" id="okCopia" aria-live="polite"></p>
     </div>
     <div class="lista" id="lista" aria-live="polite"></div>
+    <button class="op" type="button" id="bBloqDia" hidden style="justify-self:start">+ Bloquear tiempo este día</button>
     <div class="lista" id="bajas"></div>
   </section>
 
@@ -165,7 +169,7 @@ input[type=checkbox]{width:20px;height:20px;padding:0;accent-color:var(--c)}
       <label class="l" for="fHora">Hora<select id="fHora"></select></label>
     </div>
     <label class="l" for="fHoraOtra" id="fHoraOtraCaja" hidden>Otra hora<input id="fHoraOtra" type="time" step="300"></label>
-    <p class="mu" id="fHoraAviso" hidden style="color:var(--warn);font-weight:700"></p>
+    <p class="mu" id="fHoraAviso" hidden style="color:var(--warn)"></p>
     <div class="l"><span>¿Cuánto tiempo le va a dedicar?</span>
       <div class="chips" id="fDur" role="group" aria-label="Duración"></div>
       <label class="l" for="fDurOtra" id="fDurOtraCaja" hidden>Minutos<input id="fDurOtra" type="number" inputmode="numeric" min="5" max="600" step="5"></label>
@@ -187,6 +191,23 @@ input[type=checkbox]{width:20px;height:20px;padding:0;accent-color:var(--c)}
     <label class="l" for="fLugar">¿Dónde?<select id="fLugar"></select></label>
     <p class="err" id="fErr" hidden></p>
     <div class="btns"><button class="btn sec" type="button" id="fCancelar">Cancelar</button><button class="btn" type="submit">Guardar cita</button></div>
+  </form>
+</div>
+<!-- Bloquear tiempo / cambiar un bloque (comida…) -->
+<div class="hoja" id="hBloq" hidden role="dialog" aria-modal="true" aria-labelledby="bTit">
+  <form class="in" id="fBloq" novalidate>
+    <h2 id="bTit">Bloquear tiempo</h2>
+    <p class="mu" id="bDia"></p>
+    <div class="dos">
+      <label class="l" for="bDesde">De<input id="bDesde" type="time" step="300"></label>
+      <label class="l" for="bHasta">A<input id="bHasta" type="time" step="300"></label>
+    </div>
+    <div class="chips"><button class="op" type="button" data-mover="-30">← 30 min antes</button><button class="op" type="button" data-mover="30">30 min después →</button></div>
+    <label class="l" for="bNota">¿Qué es?<input id="bNota" maxlength="60" placeholder="Comida, curso, salida…" autocomplete="off"></label>
+    <p class="mu" id="bAviso" hidden style="color:var(--warn)"></p>
+    <p class="err" id="bErr" hidden></p>
+    <div class="btns"><button class="btn sec" type="button" id="bCerrar">Cerrar</button><button class="btn azul" type="submit" id="bGuardar">Guardar</button></div>
+    <button class="btn baja" type="button" id="bQuitar" hidden>Quitar este bloque</button>
   </form>
 </div>
 <div id="cargador" role="status" aria-live="polite"><div class="giro" aria-hidden="true"></div><p id="cargador-txt">Cargando la agenda…</p></div>
@@ -228,17 +249,26 @@ const ahoraMin=()=>{const d=new Date();return d.getHours()*60+d.getMinutes();};
 let D=null,sel='',vista='dia',V=null,F=null,artista='';
 const hoyISO=()=>isoDe(new Date());
 
-// Renglones de un día: espacios de la artista (cada 30 min), sus citas (aunque caigan fuera de la cuadrícula) y los bloqueos
+// Con qué se cruza un rato [ini, fin) de un día: otras citas, la comida u otro bloque, o fuera del horario. (Igual que citChoques del servidor.)
+const fin=c=>aMin(c.hora)+c.duracion;
+function cruces(dia,ini,f,idExcl){
+  const r=[];
+  dia.citas.forEach(c=>{if(c.id!==idExcl&&activa(c)&&c.estado!=='Atendida'&&aMin(c.hora)<f&&fin(c)>ini)r.push({t:'cita',txt:'se cruza con '+c.nombre+' ('+ver(c.hora)+'–'+ver(aHora(fin(c)))+')',corto:c.nombre});});
+  dia.bloqueos.forEach(b=>{if(aMin(b.desde)<f&&aMin(b.hasta)>ini)r.push({t:'bloque',txt:'cae en '+(b.nota||'un bloque')+' ('+ver(b.desde)+'–'+ver(b.hasta)+')',corto:(b.nota||'bloque').toLowerCase()});});
+  if(!dia.atiende)r.push({t:'fuera',txt:'ese día no tiene horario',corto:'sin horario'});
+  else if(ini<aMin(dia.atiende.desde)||f>aMin(dia.atiende.hasta))r.push({t:'fuera',txt:'queda fuera de su horario ('+ver(dia.atiende.desde)+'–'+ver(dia.atiende.hasta)+')',corto:'fuera de horario'});
+  return r;
+}
+// Renglones de un día: sus citas (con su hora de inicio y fin), los bloqueos y los espacios libres (cada 30 min, solo si el espacio entero está libre)
 function renglones(dia){
   const out=[],int=D.intervalo||30,act=dia.citas.filter(activa);
   act.forEach(c=>out.push({t:aMin(c.hora),o:0,tipo:'cita',c}));
   dia.bloqueos.forEach(b=>out.push({t:aMin(b.desde),o:1,tipo:'bloque',b}));
   if(dia.atiende){
-    for(let m=aMin(dia.atiende.desde);m<aMin(dia.atiende.hasta);m+=int){
-      if(dia.bloqueos.some(b=>aMin(b.desde)<=m&&m<aMin(b.hasta)))continue;
-      if(act.some(c=>aMin(c.hora)>=m&&aMin(c.hora)<m+int))continue;
-      const cubre=act.find(c=>aMin(c.hora)<m&&aMin(c.hora)+c.duracion>m);
-      out.push(cubre?{t:m,o:2,tipo:'sigue',c:cubre}:{t:m,o:3,tipo:'libre'});
+    for(let m=aMin(dia.atiende.desde);m+int<=aMin(dia.atiende.hasta);m+=int){
+      if(dia.bloqueos.some(b=>aMin(b.desde)<m+int&&aMin(b.hasta)>m))continue;
+      if(act.some(c=>aMin(c.hora)<m+int&&fin(c)>m))continue;
+      out.push({t:m,o:3,tipo:'libre'});
     }
   }
   return out.sort((a,b)=>a.t-b.t||a.o-b.o);
@@ -275,9 +305,11 @@ function chipsCita(c){
   if(c.duracion!==(D.duracion||30))s+=`<span class="chip c-gris">${durTxt(c.duracion)}</span>`;
   return s;
 }
-function filaCita(c){
+function filaCita(c,dia){
   const cls=c.estado==='Llegó'?' llego':c.estado==='Atendida'?' hecha':INACT.includes(c.estado)?' baja':(c.estado!=='Confirmada'?' pend':'');
-  return `<button class="slot${cls}" type="button" data-id="${esc(c.id)}"><span class="h">${ver(c.hora)}</span><span class="q"><b>${esc(c.nombre)}</b>${c.servicio?`<span class="t">${esc(c.servicio)}</span>`:''}<span class="chips">${chipsCita(c)}</span></span></button>`;
+  // Empalmes: solo de las que siguen pendientes (una atendida o cancelada ya no importa); un aviso discreto, sin rojo
+  const cr=dia&&activa(c)&&c.estado!=='Atendida'?cruces(dia,aMin(c.hora),fin(c),c.id):[];
+  return `<button class="slot${cls}${cr.length?' cruza':''}" type="button" data-id="${esc(c.id)}"><span class="h">${ver(c.hora)}<small>a ${ver(aHora(fin(c)))}</small></span><span class="q"><b>${esc(c.nombre)}</b>${c.servicio?`<span class="t">${esc(c.servicio)}</span>`:''}<span class="chips">${chipsCita(c)}</span>${cr.length?`<span class="cruce">↔ ${esc(cr.map(x=>x.txt).join(' · '))}</span>`:''}</span></button>`;
 }
 function pintarDia(){
   $('dias').innerHTML=D.dias.map(x=>{const n=x.citas.filter(activa).length;
@@ -286,13 +318,14 @@ function pintarDia(){
   $('resumen').innerHTML=`<span class="chip">${largo(dia.fecha)}</span>`+(dia.atiende?`<span class="chip c-gris">${ver(dia.atiende.desde)} a ${ver(dia.atiende.hasta)}${dia.atiende.lugar?' · '+esc(dia.atiende.lugar):''}</span>`:'<span class="chip c-gris">'+esc(D.artista.alias)+' no atiende</span>')+
     `<span class="chip">${act.length} cita${act.length===1?'':'s'}</span>`+(dia.atiende?`<span class="chip c-libre">${l} libre${l===1?'':'s'}</span>`:'')+(pend?`<span class="chip c-warn">${pend} pendiente${pend===1?'':'s'}</span>`:'');
   $('lista').innerHTML=R.map(r=>{
-    if(r.tipo==='cita')return filaCita(r.c);
-    if(r.tipo==='bloque')return `<div class="slot bloque"><span class="h">${ver(r.b.desde)}</span><span class="q">${esc(r.b.nota||'Ocupado')} · hasta ${ver(r.b.hasta)}</span></div>`;
-    if(r.tipo==='sigue')return `<div class="slot sigue"><span class="h"></span><span class="q">↳ ${ver(aHora(r.t))} sigue ${esc(r.c.nombre)}</span></div>`;
+    if(r.tipo==='cita')return filaCita(r.c,dia);
+    if(r.tipo==='bloque'){const ed=D.puede.horarios;
+      return `<${ed?'button type="button" data-bloq-id="'+esc(r.b.id)+'"':'div'} class="slot bloque"><span class="h">${ver(r.b.desde)}<small>a ${ver(r.b.hasta)}</small></span><span class="q">${esc(r.b.nota||'Ocupado')}${ed?'<small>Toca para cambiar la hora</small>':''}</span></${ed?'button':'div'}>`;}
     return `<button class="slot libre" type="button" data-hora="${aHora(r.t)}"${D.puede.agendar?'':' disabled'}><span class="h">${ver(aHora(r.t))}</span><span class="q">Libre${D.puede.agendar?' · + agendar':''}</span></button>`;
   }).join('')||`<div class="vacio">${dia.atiende?'Sin citas.':esc(D.artista.alias)+' no tiene horario este día.'+(D.puede.horarios?' Ábrelo en Horarios.':'')+(D.puede.agendar?' También puedes agendar fuera de horario.':'')}</div>`;
+  $('bBloqDia').hidden=!(D.puede.horarios&&dia.atiende);
   const bajas=dia.citas.filter(c=>!activa(c));
-  $('bajas').innerHTML=bajas.length?'<p class="mu" style="font-weight:700">Canceladas o no vinieron</p>'+bajas.map(filaCita).join(''):'';
+  $('bajas').innerHTML=bajas.length?'<p class="mu" style="font-weight:700">Canceladas o no vinieron</p>'+bajas.map(c=>filaCita(c)).join(''):'';
   if(!$('pLibres').hidden)textoLibres();
 }
 function textoLibres(){
@@ -304,7 +337,7 @@ function listaDia(){
   const dia=diaSel();
   return largo(dia.fecha)+'\n'+renglones(dia).map(r=>{
     if(r.tipo==='cita'){const c=r.c;return ver(c.hora)+' '+c.nombre+(c.servicio?' '+c.servicio:'')+(c.anticipo?' (anticipo '+pesos(c.anticipo)+')':'')+(c.estado==='Por confirmar'||c.estado==='Falta anticipo'?' ('+c.estado.toLowerCase()+')':'')+(c.menor?' (menor)':'');}
-    if(r.tipo==='bloque')return ver(r.b.desde)+' '+(r.b.nota||'Ocupado').toUpperCase();
+    if(r.tipo==='bloque')return ver(r.b.desde)+'–'+ver(r.b.hasta)+' '+(r.b.nota||'Ocupado').toUpperCase();
     if(r.tipo==='libre')return ver(aHora(r.t));
     return null;
   }).filter(Boolean).join('\n');
@@ -320,7 +353,7 @@ function pintarSemana(){
     const segs=[],int=D.intervalo||30;
     for(let m=aMin(x.atiende.desde);m<aMin(x.atiende.hasta);m+=int){
       let cls='';
-      if(x.bloqueos.some(b=>aMin(b.desde)<=m&&m<aMin(b.hasta)))cls='x';
+      if(x.bloqueos.some(b=>aMin(b.desde)<m+int&&aMin(b.hasta)>m))cls='x';
       act.forEach(c=>{const cm=aMin(c.hora);if(cm<m+int&&cm+c.duracion>m)cls=(c.estado==='Por confirmar'||c.estado==='Falta anticipo')?'p':'o';});
       segs.push(`<span class="${cls}"></span>`);
     }
@@ -341,10 +374,9 @@ function pintarHorarios(){
     if(!a)return `<div class="hor"><b style="color:var(--c)">${largo(f)}</b><div class="r"><span class="chip c-gris">No atiende</span>${p?`<button class="op" type="button" data-abrir="${f}">Abrir este día</button>`:''}</div></div>`;
     return `<div class="hor" data-f="${f}"><b style="color:var(--c)">${largo(f)}</b>
       <div class="r">${p?`De <input type="time" step="1800" value="${a.desde}" data-h="desde" aria-label="Desde"> a <input type="time" step="1800" value="${a.hasta}" data-h="hasta" aria-label="Hasta"> <select data-h="lugar" aria-label="Lugar">${opcionesLugar(a.lugar)}</select>`:`De ${ver(a.desde)} a ${ver(a.hasta)}${a.lugar?' · '+esc(a.lugar):''}`}</div>
-      <div class="r">${x.bloqueos.map(b=>`<span class="chip c-gris">${esc(b.nota||'Ocupado')} ${ver(b.desde)}–${ver(b.hasta)}${p?` <button class="link" type="button" data-quitar="${esc(b.id)}" aria-label="Quitar ${esc(b.nota)}">✕</button>`:''}</span>`).join('')}
-        ${p?`<button class="op" type="button" data-bloq="${f}">+ Bloquear un rato</button><button class="link" type="button" data-cerrar="${f}">No atiende este día</button>`:''}</div>
-      <div class="conf" data-bform="${f}" hidden><div class="dos"><label class="l">De<input type="time" step="900" value="15:00" data-b="desde"></label><label class="l">A<input type="time" step="900" value="16:00" data-b="hasta"></label></div>
-        <label class="l">¿Qué es?<input maxlength="60" value="Comida" data-b="nota"></label><div class="btns"><button class="btn sec" type="button" data-bno>Cancelar</button><button class="btn azul" type="button" data-bsi="${f}">Bloquear</button></div></div>
+      <div class="r">${x.bloqueos.map(b=>p?`<button class="op x" type="button" data-bloq-id="${esc(b.id)}" aria-label="Cambiar ${esc(b.nota||'bloque')}">${esc(b.nota||'Ocupado')} ${ver(b.desde)}–${ver(b.hasta)} ✎</button>`:`<span class="chip c-gris">${esc(b.nota||'Ocupado')} ${ver(b.desde)}–${ver(b.hasta)}</span>`).join('')}
+        ${p?`<button class="op" type="button" data-bloq="${f}">+ Bloquear tiempo</button><button class="link" type="button" data-cerrar="${f}">No atiende este día</button>`:''}</div>
+      <div class="conf" data-bform="${f}" hidden></div>
     </div>`;
   }).join('');
 }
@@ -388,7 +420,7 @@ function abrir(id){
   api('consent_cit_historial',{id:c.id}).then(r=>{if(V&&V.id===c.id)$('vHist').innerHTML=r.historial.map(h=>`<li>${esc(h.cuando)} · ${esc(h.por)}: ${esc(h.que==='Agendó'?'la agendó':h.que.replace(/^Cambio: /,'cambió ').replace(/^Estado$/,'estado'))}${h.antes?' '+esc(h.antes)+' →':''} ${esc(h.despues)}</li>`).join('')||'<li>Sin movimientos.</li>';}).catch(x=>{$('vHist').innerHTML='<li>'+esc(msg(x.message))+'</li>';});
 }
 function vError(m){const e=$('vErr');if(e){e.textContent=m?msg(m):'';e.hidden=!m;}}
-function vConf(html,si,txtSi){const c=$('vConf');c.innerHTML=html+`<div class="btns"><button class="btn sec" type="button" id="cNo">No</button><button class="btn" type="button" id="cSi">${txtSi||'Sí'}</button></div>`;c.hidden=false;
+function vConf(html,si,txtSi,txtNo){const c=$('vConf');c.innerHTML=html+`<div class="btns"><button class="btn sec" type="button" id="cNo">${txtNo||'Volver'}</button><button class="btn" type="button" id="cSi">${txtSi||'Sí'}</button></div>`;c.hidden=false;
   $('cNo').onclick=()=>{c.hidden=true;};$('cSi').onclick=si;const i=c.querySelector('input');(i||$('cSi')).focus();}
 function cerrarVer(){$('hVer').hidden=true;V=null;}
 async function estado(est,motivo,aviso){
@@ -410,9 +442,9 @@ $('vIn').addEventListener('click',async e=>{
   }
   if(a==='nota')return aNota(V);
   if(a==='cambiar'){const c=V;cerrarVer();return abrirForm(c);}
-  if(a==='novino')return vConf('<b>¿'+esc(V.nombre)+' no vino?</b>'+(V.anticipo?'<p class="mu">Dejó '+pesos(V.anticipo)+' de anticipo.</p>':''),()=>estado('No vino','','Marcada: no vino.'));
-  if(a==='cancelar')return vConf('<b>¿Cancelar la cita de '+esc(V.nombre)+'?</b><label class="l" for="cMot">¿Por qué?<input id="cMot" maxlength="200" placeholder="Ej. se le complicó, la movió a otro día…"></label>'+(V.anticipo?'<p class="mu">Ojo: dejó '+pesos(V.anticipo)+' de anticipo.</p>':''),
-    ()=>{const m=$('cMot').value.trim();if(!m){vError('Escribe por qué se cancela.');return;}estado('Cancelada',m,'Cita cancelada. Sigue en su día, tachada.');});
+  if(a==='novino')return vConf('<b>Vas a marcar que '+esc(V.nombre)+' no vino a su cita.</b><p class="mu">Queda tachada en su día y su hora se libera. Si fue un error, se puede regresar.'+(V.anticipo?' Dejó '+pesos(V.anticipo)+' de anticipo.':'')+'</p>',()=>estado('No vino','','Marcada: no vino.'),'Marcar: no vino','Volver');
+  if(a==='cancelar')return vConf('<b>Vas a cancelar la cita de '+esc(V.nombre)+'.</b><label class="l" for="cMot">¿Por qué?<input id="cMot" maxlength="200" placeholder="Ej. se le complicó, la movió a otro día…"></label>'+(V.anticipo?'<p class="mu">Ojo: dejó '+pesos(V.anticipo)+' de anticipo.</p>':''),
+    ()=>{const m=$('cMot').value.trim();if(!m){vError('Escribe por qué se cancela.');return;}estado('Cancelada',m,'Cita cancelada. Sigue en su día, tachada.');},'Cancelar la cita','Volver');
   if(a==='regresar')return estado('Confirmada','','Regresada a Confirmada.');
 });
 $('hVer').addEventListener('click',e=>{if(e.target.id==='hVer')cerrarVer();});
@@ -423,25 +455,36 @@ async function diaDatos(iso){
   const x=D.dias.find(d=>d.fecha===iso);if(x)return x;
   try{const r=await api('consent_cit_semana',{desde:iso,dias:1,artista:D.artista.id});return r.dias[0];}catch(e){return {fecha:iso,atiende:null,bloqueos:[],citas:[]};}
 }
+// Las horas del selector: cada 30 min de su horario (o de 9 a 8 si ese día no tiene). Cada una dice si cabe la cita completa, con su duración.
 async function llenarHoras(prefer){
-  const iso=$('fDia').value;if(!iso){$('fHora').innerHTML='';return;}
+  const iso=$('fDia').value;if(!iso){$('fHora').innerHTML='';F.dia=null;return;}
   const x=await diaDatos(iso);if($('fDia').value!==iso)return;
-  const ops=renglones(x).filter(r=>!(r.tipo==='cita'&&F.id&&r.c.id===F.id)).map(r=>{
-    const h=r.tipo==='bloque'?r.b.desde:r.tipo==='cita'?r.c.hora:aHora(r.t);
-    const t=r.tipo==='libre'?'libre':r.tipo==='cita'?'ocupada ('+r.c.nombre+')':r.tipo==='sigue'?'ocupada (sigue '+r.c.nombre+')':(r.b.nota||'ocupado').toLowerCase();
-    return `<option value="${h}">${ver(h)} · ${esc(t)}</option>`;});
+  F.dia=x;pintarHoras(prefer,true);
+  if(!F.id&&!$('fLugar').value&&x.atiende&&x.atiende.lugar)$('fLugar').innerHTML=opcionesLugar(x.atiende.lugar);
+}
+function pintarHoras(prefer,elegir){
+  const x=F.dia;if(!x)return;
+  const int=D.intervalo||30,ini=x.atiende?aMin(x.atiende.desde):9*60,tope=x.atiende?aMin(x.atiende.hasta):20*60,ya=x.fecha===hoyISO()?ahoraMin():-1;
+  const ops=[];let primera='';
+  for(let m=ini;m<tope;m+=int){
+    const cr=cruces(x,m,m+F.dur,F.id).filter(c=>x.atiende||c.t!=='fuera'),h=aHora(m);   // sin horario: el aviso va abajo, no en cada hora
+    if(!cr.length&&!primera&&m>ya)primera=h;
+    const con=cr.filter(c=>c.t==='cita').map(c=>c.corto),otro=cr.filter(c=>c.t!=='cita').map(c=>c.corto);
+    ops.push(`<option value="${h}">${ver(h)} · ${cr.length?esc((con.length?['con '+con.join(' y ')]:[]).concat(otro).join(', ')):'libre'}</option>`);
+  }
+  const antes=$('fHora').value==='otra'?$('fHoraOtra').value:$('fHora').value;
   $('fHora').innerHTML=ops.join('')+'<option value="otra">Otra hora…</option>';
-  const libre=renglones(x).find(r=>r.tipo==='libre'&&!(iso===hoyISO()&&r.t<ahoraMin()));
-  let v=prefer||(libre?aHora(libre.t):'otra');
+  let v=elegir?(prefer||primera||'otra'):antes;
+  if(!v)v='otra';
   if(![...$('fHora').options].some(o=>o.value===v)){$('fHoraOtra').value=v==='otra'?'':v;v='otra';}
   $('fHora').value=v;horaCambio();
-  if(!F.id&&!$('fLugar').value&&x.atiende&&x.atiende.lugar)$('fLugar').innerHTML=opcionesLugar(x.atiende.lugar);
 }
 function horaCambio(){
   const o=$('fHora').value==='otra';$('fHoraOtraCaja').hidden=!o;
-  const t=o?'':($('fHora').options[$('fHora').selectedIndex]||{}).text||'';
-  $('fHoraAviso').textContent=t&&!/· libre$/.test(t)?'Ojo: esa hora ya está ocupada. Se puede guardar igual si se atiende a las dos.':'';
-  $('fHoraAviso').hidden=!$('fHoraAviso').textContent;
+  const h=o?$('fHoraOtra').value:$('fHora').value,m=aMin(h);
+  const cr=F.dia&&!isNaN(m)?cruces(F.dia,m,m+F.dur,F.id):[];
+  $('fHoraAviso').textContent=cr.length?ver(h)+' a '+ver(aHora(m+F.dur))+': '+cr.map(c=>c.txt).join(' · ')+'. Se puede guardar igual.':'';
+  $('fHoraAviso').hidden=!cr.length;
 }
 function pintarDur(d){
   const otra=!DURS.includes(d);
@@ -471,8 +514,10 @@ function abrirForm(c,hora){
 }
 $('fDia').addEventListener('change',()=>llenarHoras());
 $('fHora').addEventListener('change',horaCambio);
+$('fHoraOtra').addEventListener('input',horaCambio);
 $('fDur').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(!b)return;F.dur=b.dataset.d==='otra'?(Number($('fDurOtra').value)||F.dur):Number(b.dataset.d);
-  [...$('fDur').children].forEach(x=>x.setAttribute('aria-pressed',String(x===b)));$('fDurOtraCaja').hidden=b.dataset.d!=='otra';if(b.dataset.d==='otra'){$('fDurOtra').value=F.dur;$('fDurOtra').focus();}});
+  [...$('fDur').children].forEach(x=>x.setAttribute('aria-pressed',String(x===b)));$('fDurOtraCaja').hidden=b.dataset.d!=='otra';if(b.dataset.d==='otra'){$('fDurOtra').value=F.dur;$('fDurOtra').focus();}pintarHoras();});
+$('fDurOtra').addEventListener('input',()=>{const n=Number($('fDurOtra').value);if(n>=5&&n<=600){F.dur=n;pintarHoras();}});
 $('fEstado').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b)return;F.estado=b.dataset.e;pintarEstado(F.estado);});
 $('fMenor').addEventListener('change',()=>{$('fTutorCaja').hidden=!$('fMenor').checked;});
 let tBus=null;
@@ -498,7 +543,7 @@ $('form').addEventListener('submit',async e=>{
   try{
     const r=await api('consent_cit_guardar',{id:F.id,cita,desde:D.dias.some(x=>x.fecha===cita.fecha)?D.desde:cita.fecha,artista:D.artista.id},'Guardando la cita…');
     D=r;sel=cita.fecha;$('hForm').hidden=true;vista='dia';pintar();
-    okMsg((r.sin_cambios?'Sin cambios.':(F.id?'Cita cambiada ✓ ':'Cita agendada ✓ ')+largo(cita.fecha)+' a las '+ver(hora))+(r.choca&&r.choca.length?' · Ojo: se empalma con '+r.choca.join(', ')+'.':''));scrollTo(0,0);
+    okMsg((r.sin_cambios?'Sin cambios.':(F.id?'Cita cambiada ✓ ':'Cita agendada ✓ ')+largo(cita.fecha)+' a las '+ver(hora))+(r.choca&&r.choca.length?' · Ojo: '+r.choca.join(' · ')+'.':''));scrollTo(0,0);
   }catch(x){err(x.message);}
 });
 
@@ -519,17 +564,53 @@ $('hor').addEventListener('click',e=>{
   if(t.dataset.cerrar){const f=t.dataset.cerrar,dia=D.dias.find(x=>x.fecha===f),n=dia.citas.filter(activa).length;
     const c=t.closest('.hor').querySelector('[data-bform]');c.hidden=false;c.innerHTML=`<b>¿${esc(D.artista.alias)} no atiende el ${largo(f)}?</b>${n?`<p class="mu">Ojo: ese día hay ${n} cita${n===1?'':'s'}. No se cancelan solas.</p>`:''}<div class="btns"><button class="btn sec" type="button" data-bno>No</button><button class="btn baja" type="button" data-cerrarsi="${f}">Sí, no atiende</button></div>`;return;}
   if(t.dataset.cerrarsi)return horario({accion:'no_atiende',fecha:t.dataset.cerrarsi},'Guardando…','Listo: ese día no atiende.');
-  if(t.dataset.bloq){const c=t.closest('.hor').querySelector('[data-bform]');c.hidden=false;c.querySelector('[data-b="desde"]')&&c.querySelector('[data-b="desde"]').focus();return;}
+  if(t.dataset.bloq)return abrirBloque(t.dataset.bloq);
+  const eb=t.closest('[data-bloq-id]');if(eb)return abrirBloque(null,eb.dataset.bloqId);
   if(t.hasAttribute('data-bno')){pintarHorarios();return;}
-  if(t.dataset.bsi){const c=t.closest('[data-bform]'),g=k=>c.querySelector(`[data-b="${k}"]`).value;return horario({accion:'bloqueo',fecha:t.dataset.bsi,desde:g('desde'),hasta:g('hasta'),nota:g('nota')},'Guardando…','Bloqueado ✓');}
 });
+
+// ── Bloquear tiempo / cambiar un bloque (comida…), desde el día o desde Horarios ──
+let B=null;
+function buscarBloque(id){for(const x of D.dias){const b=x.bloqueos.find(b=>b.id===id);if(b)return {b,f:x.fecha};}return null;}
+function abrirBloque(f,id){
+  const e=id?buscarBloque(id):null;if(id&&!e)return;
+  B={id:id||'',f:e?e.f:f};
+  const dia=D.dias.find(x=>x.fecha===B.f),ya=dia&&dia.bloqueos.some(b=>/comida/i.test(b.nota||''));
+  $('bTit').textContent=e?'Cambiar '+(e.b.nota||'bloque').toLowerCase():'Bloquear tiempo';
+  $('bDia').textContent=largo(B.f)+' · '+D.artista.alias;
+  $('bDesde').value=e?e.b.desde:(ya?'':'15:00');$('bHasta').value=e?e.b.hasta:(ya?'':'16:00');$('bNota').value=e?e.b.nota:(ya?'':'Comida');
+  $('bQuitar').hidden=!e;$('bErr').hidden=true;
+  avisoBloque();$('hBloq').hidden=false;$('bDesde').focus();
+}
+function avisoBloque(){
+  const dia=D.dias.find(x=>x.fecha===B.f),i=aMin($('bDesde').value),f=aMin($('bHasta').value);
+  const c=dia&&!isNaN(i)&&!isNaN(f)&&f>i?dia.citas.filter(c=>activa(c)&&c.estado!=='Atendida'&&aMin(c.hora)<f&&fin(c)>i):[];
+  $('bAviso').textContent=c.length?'En ese rato hay cita: '+c.map(c=>c.nombre+' ('+ver(c.hora)+'–'+ver(aHora(fin(c)))+')').join(', ')+'. La cita no se mueve sola.':'';
+  $('bAviso').hidden=!c.length;
+}
+const cerrarBloque=()=>{$('hBloq').hidden=true;B=null;};
+$('bDesde').addEventListener('input',avisoBloque);$('bHasta').addEventListener('input',avisoBloque);
+$('fBloq').addEventListener('click',e=>{const m=e.target.closest('[data-mover]');if(!m)return;const n=Number(m.dataset.mover);
+  ['bDesde','bHasta'].forEach(k=>{const v=aMin($(k).value);if(!isNaN(v))$(k).value=aHora(Math.min(Math.max(v+n,0),23*60+55));});avisoBloque();});
+$('bCerrar').onclick=cerrarBloque;
+$('hBloq').addEventListener('click',e=>{if(e.target.id==='hBloq')cerrarBloque();});
+async function guardarBloque(datos,aviso){
+  try{D=await api('consent_cit_horario',Object.assign({artista:D.artista.id,semana:D.desde},datos),'Guardando…');cerrarBloque();pintar();okMsg(aviso);}
+  catch(x){$('bErr').textContent=msg(x.message);$('bErr').hidden=false;}
+}
+$('fBloq').addEventListener('submit',e=>{e.preventDefault();$('bErr').hidden=true;
+  const d=$('bDesde').value,h=$('bHasta').value,n=$('bNota').value.trim();
+  if(!d||!h||aMin(h)<=aMin(d)){$('bErr').textContent='Revisa las horas: la final debe ser después de la inicial.';$('bErr').hidden=false;return;}
+  guardarBloque({accion:'bloqueo',id:B.id,fecha:B.f,desde:d,hasta:h,nota:n||'Ocupado'},(B.id?'Cambiado ✓ ':'Bloqueado ✓ ')+(n||'Ocupado')+' de '+ver(d)+' a '+ver(h));});
+$('bQuitar').onclick=()=>guardarBloque({accion:'quitar',id:B.id},'Bloque quitado ✓');
 $('bCopiarSem').onclick=async()=>{const r=await horario({accion:'copiar_semana'},'Copiando…');if(r)okMsg(r.copiados?'Se copiaron '+r.copiados+' día'+(r.copiados===1?'':'s')+' de la semana pasada ✓':'No había nada que copiar: estos días ya tienen horario o la semana pasada no tenía.');};
 
 // ── Navegación ──
 document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(b){vista=b.dataset.v;okMsg('');pintar();}});
 $('dias').addEventListener('click',e=>{const b=e.target.closest('[data-f]');if(b){sel=b.dataset.f;okMsg('');pintarDia();}});
 $('semana').addEventListener('click',e=>{const b=e.target.closest('[data-f]');if(b){sel=b.dataset.f;vista='dia';pintar();}});
-$('lista').addEventListener('click',e=>{const b=e.target.closest('[data-id]');if(b){okMsg('');return abrir(b.dataset.id);}const l=e.target.closest('[data-hora]');if(l&&D.puede.agendar){okMsg('');abrirForm(null,l.dataset.hora);}});
+$('bBloqDia').onclick=()=>{okMsg('');abrirBloque(sel);};
+$('lista').addEventListener('click',e=>{const k=e.target.closest('[data-bloq-id]');if(k){okMsg('');return abrirBloque(null,k.dataset.bloqId);}const b=e.target.closest('[data-id]');if(b){okMsg('');return abrir(b.dataset.id);}const l=e.target.closest('[data-hora]');if(l&&D.puede.agendar){okMsg('');abrirForm(null,l.dataset.hora);}});
 $('bajas').addEventListener('click',e=>{const b=e.target.closest('[data-id]');if(b)abrir(b.dataset.id);});
 $('bNueva').onclick=()=>{okMsg('');abrirForm(null);};
 $('bLibres').onclick=()=>{$('pLibres').hidden=!$('pLibres').hidden;if(!$('pLibres').hidden)textoLibres();};
